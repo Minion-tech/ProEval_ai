@@ -1,0 +1,20 @@
+#FastAPI provides native async support (critical for waiting on multiple AI agents) and automatic API documentation.Uvicorn is the lightning-fast server that runs it. 
+fastapi
+uvicorn
+#We use SQLAlchemy (Object-Relational Mapper) so we can treat DB rows as Python objects. asyncpg is the driver for asyncpg, alembic PostgreSQL that allows "non-blocking" DB queries. Alembic tracks changes to your DB schema over time (like Git for your database). 
+sqlalchemy[asyncio]
+asyncpg
+alembic
+#AI calls can take 60+ seconds. We use Celery to run these in the background so the user doesn't get a "Request Jobs Timeout." Redis acts as the "Inbox" where the API drops tasks for Celery to pick up.
+celery
+redis
+# Pydantic is the "Bouncer" for your data. It ensures that if an agent (or a user) sends a malformed response, it gets caught before it breaks the system.
+pydantic-settings
+#JWT (JSON Web Tokens) are the standard for stateless authentication. Passlib ensures we never store passwords in plain text (it hashes them with salt). 
+pyjwt
+passlib[bcrypt]
+# In production, you don't use print(). Structlog provides JSON logs that tools like Datadog or ELK can "read" to help you debug production errors.
+structlog
+pydantic
+anthropic
+
