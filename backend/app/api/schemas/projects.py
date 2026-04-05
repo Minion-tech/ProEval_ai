@@ -19,6 +19,26 @@ class ProjectSubmissionCreateSchema(BaseModel):
     academic_year: str = Field(..., example="2025-26")
     semester: int = Field(..., ge=1, le=8)
 
+class TeamJoinSchema(BaseModel):
+    """Schema for a student to join an existing team."""
+    team_id: str = Field(..., description="Human-readable team ID like TEAM-2025-1234")
+    role: str = Field(..., min_length=2, max_length=100, example="Frontend Developer")
+    functions: str = Field(..., min_length=10, description="What specific tasks will you handle?")
+    modules: str = Field(..., min_length=5, description="Which parts of the code will you work on?")
+
+class TeamMembershipResponseSchema(BaseModel):
+    """Schema representing a team member record."""
+    id: UUID
+    submission_id: UUID
+    student_id: UUID
+    role: str
+    functions: str
+    modules: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
 #3 the response schema (What api returns)
 class ProjectSubmissionResponseSchema(BaseModel):
     """Schema representing a project record sent back to the client."""
