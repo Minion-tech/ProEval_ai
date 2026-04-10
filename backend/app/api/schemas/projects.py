@@ -2,6 +2,7 @@ from typing import Optional, List
 from pydantic import BaseModel, Field
 from uuid import UUID
 from datetime import datetime
+from app.db.Models import EvaluationPhase, EvaluationStatus
 
 #phase 1  Form Data
 class Phase1DataSchema(BaseModel):
@@ -19,6 +20,41 @@ class ProjectSubmissionCreateSchema(BaseModel):
     academic_year: str = Field(..., example="2025-26")
     semester: int = Field(..., ge=1, le=8)
 
+
+class Phase2DataSchema(BaseModel):
+    """Schema for the mid-term progress review payload."""
+
+    github_url: str = Field(..., min_length=10, description="Repository URL for the project")
+    architecture_diagram_url: Optional[str] = Field(
+        default=None,
+        description="URL to the latest architecture diagram or system design artifact",
+    )
+    progress_notes: str = Field(
+        ...,
+        min_length=50,
+        max_length=3000,
+        description="Detailed summary of the work completed so far",
+    )
+    completed_milestones: List[str] = Field(
+        ...,
+        min_items=1,
+        description="Milestones completed since proposal approval",
+    )
+    pending_risks: List[str] = Field(
+        default_factory=list,
+        description="Known blockers, risks, or unresolved technical concerns",
+    )
+    documentation_url: Optional[str] = Field(
+        default=None,
+        description="Optional link to supporting documentation",
+    )
+
+
+class Phase2SubmissionSchema(BaseModel):
+    """Schema for submitting Phase 2 project progress."""
+
+    phase_2_data: Phase2DataSchema
+
 class TeamJoinSchema(BaseModel):
     """Schema for a student to join an existing team."""
     team_id: str = Field(..., description="Human-readable team ID like TEAM-2025-1234")
@@ -35,6 +71,24 @@ class TeamMembershipResponseSchema(BaseModel):
     functions: str
     modules: str
     created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class EvaluationResponseSchema(BaseModel):
+    """Schema representing AI feedback for a specific project phase."""
+
+    id: UUID
+    submission_id: UUID
+    faculty_id: UUID
+    phase: EvaluationPhase
+    status: EvaluationStatus
+    total_score: Optional[float] = None
+    grade: Optional[str] = None
+    ai_narrative: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True

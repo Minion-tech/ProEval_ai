@@ -18,10 +18,27 @@ class OTPVerify(BaseModel):
     email: EmailStr
     otp_code: str = Field(..., min_length=6, max_length=6)
 
+class LoginRequest(BaseModel):
+    """Schema for the shared student/faculty login request."""
+    email: EmailStr
+    password: str = Field(..., min_length=8)
+
 class Token(BaseModel):
     """Schema for the JWT response."""
     access_token: str
     token_type: str = "bearer"
+
+class CurrentUserResponse(BaseModel):
+    """Schema returned by the authenticated profile endpoint."""
+    id: UUID
+    name: str
+    email: EmailStr
+    role: str
+    department: Optional[str] = None
+    enrollment_no: Optional[str] = None
+    programme: Optional[ProgrammeType] = None
+    batch: Optional[str] = None
+    is_verified: Optional[bool] = None
 
 class TokenPayload(BaseModel):
     """Schema for the data stored inside the JWT."""
