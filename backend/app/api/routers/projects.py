@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
-from typing import Optional
+from typing import Optional, Any
 
 from app.api.deps import get_current_faculty, get_current_student, get_current_user
 from app.db.session import get_db
@@ -13,6 +13,8 @@ from app.api.schemas.projects import (
     ProjectSubmissionResponseSchema,
     TeamJoinSchema,
     TeamMembershipResponseSchema,
+    MyProjectResponseSchema,
+    FinalSubmissionSchema,
 )
 from app.services.evaluation_service import EvaluationService
 from app.services.project_service import ProjectService
@@ -98,6 +100,14 @@ async def create_new_project(
             detail="An unexpected error occurred while creating the project.",
         )
 
+@router.get("/my-project", response_model=Optional[MyProjectResponseSchema])
+async def get_my_active_project(
+    db: AsyncSession = Depends(get_db),
+    current_student: StudentAuth = Depends(get_current_student),
+) -> Any:
+    """Returns the student's current active project membership details."""
+    return await ProjectService.get_my_project(db, current_student.id)
+
 @router.patch("/{submission_id}/approve", response_model=ProjectSubmissionResponseSchema)
 async def approve_project(
     submission_id: UUID,
@@ -147,6 +157,45 @@ async def review_phase_2(
 ) -> ProjectSubmissionResponseSchema:
     """Endpoint for the assigned guide to review the Phase 2 submission."""
     return await ProjectService.review_phase_2(
+        db=db,
+        submission_id=submission_id,
+        guide_id=current_faculty.id,
+        status=status,
+        feedback=feedback,
+    )
+
+@router.post(
+    "/final/{submission_id}",
+    response_model=ProjectSubmissionResponseSchema,
+)
+async def submit_final_project(
+    submission_id: UUID,
+    data: FinalSubmissionSchema,
+    db: AsyncSession = Depends(get_db),
+    current_student: StudentAuth = Depends(get_current_student),
+) -> ProjectSubmissionResponseSchema:
+    """Endpoint for the team leader to submit Final project work."""
+    return await ProjectService.submit_final(
+        db=db,
+        submission_id=submission_id,
+        leader_id=current_student.id,
+        data=data,
+    )
+
+
+@router.patch(
+    "/final/{submission_id}/review",
+    response_model=ProjectSubmissionResponseSchema,
+)
+async def review_final_project(
+    submission_id: UUID,
+    status: GuideStatus,
+    feedback: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    current_faculty: Faculty = Depends(get_current_faculty),
+) -> ProjectSubmissionResponseSchema:
+    """Endpoint for the assigned guide to review the Final submission and trigger grading."""
+    return await ProjectService.review_final(
         db=db,
         submission_id=submission_id,
         guide_id=current_faculty.id,

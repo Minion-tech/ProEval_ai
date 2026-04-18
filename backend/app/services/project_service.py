@@ -7,11 +7,73 @@ from fastapi import HTTPException, status
 from typing import Optional
 
 from app.db.Models import ProjectSubmission, TeamMembership, StudentAuth, ProjectPhase, GuideStatus, EvaluationPhase
-from app.api.schemas.projects import ProjectSubmissionCreateSchema, TeamJoinSchema
+from app.api.schemas.projects import (
+    ProjectSubmissionCreateSchema,
+    Phase2SubmissionSchema,
+    FinalSubmissionSchema,
+    TeamJoinSchema,
+)
 from app.services.evaluation_service import EvaluationService
 import asyncio
 
 class ProjectService:
+    @staticmethod
+    async def get_submission_by_id(
+        db: AsyncSession,
+        submission_id: uuid.UUID,
+    ) -> ProjectSubmission | None:
+        """Fetch a project submission by primary key."""
+        query = select(ProjectSubmission).where(ProjectSubmission.id == submission_id)
+        result = await db.execute(query)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_my_project(
+        db: AsyncSession,
+        student_id: uuid.UUID,
+    ) -> Optional[dict]:
+        """
+        Finds the current project for the logged-in student.
+        Returns a dict with project, role, member list.
+        """
+        # 1. Search if they are a member of any team
+        membership_query = select(TeamMembership).where(TeamMembership.student_id == student_id)
+        membership_result = await db.execute(membership_query)
+        membership = membership_result.scalar_one_or_none()
+
+        if not membership:
+            return None
+
+        # 2. Get the associated project
+        project = await ProjectService.get_submission_by_id(db, membership.submission_id)
+        if not project:
+            return None
+
+        # 3. Get all members for this project with student details
+        from sqlalchemy.orm import joinedload
+        members_query = select(TeamMembership).where(
+            TeamMembership.submission_id == project.id
+        ).options(joinedload(TeamMembership.student))
+        members_result = await db.execute(members_query)
+        members = members_result.scalars().all()
+
+        return {
+            "project": project,
+            "user_role": membership.role,
+            "member_count": len(members),
+            "members": [
+                {
+                    "name": m.student.name,
+                    "email": m.student.email,
+                    "role": m.role,
+                    "functions": m.functions,
+                    "modules": m.modules,
+                    "is_leader": m.student_id == project.leader_id
+                }
+                for m in members
+            ]
+        }
+
     @staticmethod
     async def generate_team_id(db: AsyncSession, year: str) -> str:
         """Generates a unique human-readable team ID: TEAM-{year}-{random_number}"""
@@ -98,9 +160,7 @@ class ProjectService:
         Handles the Guide Approval/Rejection of a Phase 1 submission.
         """
         # 1. Fetch the project
-        query = select(ProjectSubmission).where(ProjectSubmission.id == submission_id)
-        result = await db.execute(query)
-        project = result.scalar_one_or_none()
+        project = await ProjectService.get_submission_by_id(db, submission_id)
 
         if not project:
             raise HTTPException(
@@ -147,6 +207,188 @@ class ProjectService:
 
             # b. Fire-and-forget background task
             asyncio.create_task(EvaluationService.run_phase_1_analysis(new_eval.id))
+
+        return project
+
+    @staticmethod
+    async def submit_phase_2(
+        db: AsyncSession,
+        submission_id: uuid.UUID,
+        leader_id: uuid.UUID,
+        data: Phase2SubmissionSchema,
+    ) -> ProjectSubmission:
+        """
+        Stores the Phase 2 mid-term submission after validating phase-gating rules.
+        """
+        project = await ProjectService.get_submission_by_id(db, submission_id)
+
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project submission not found.",
+            )
+
+        if project.leader_id != leader_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only the team leader can submit Phase 2 data.",
+            )
+
+        phase_1_eval = await EvaluationService.get_latest_evaluation(
+            db=db,
+            submission_id=submission_id,
+            phase=EvaluationPhase.PHASE_1,
+        )
+        if not phase_1_eval or phase_1_eval.status.value != "COMPLETED":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Phase 1 evaluation must be completed before Phase 2 is unlocked.",
+            )
+
+        project.phase_2_data = data.phase_2_data.model_dump()
+        project.current_phase = ProjectPhase.PHASE_2
+        project.guide_status = GuideStatus.PENDING
+
+        await db.commit()
+        await db.refresh(project)
+        return project
+
+    @staticmethod
+    async def review_phase_2(
+        db: AsyncSession,
+        submission_id: uuid.UUID,
+        guide_id: uuid.UUID,
+        status: GuideStatus,
+        feedback: Optional[str] = None,
+    ) -> ProjectSubmission:
+        """
+        Handles the guide decision for the Phase 2 submission and triggers evaluation.
+        """
+        project = await ProjectService.get_submission_by_id(db, submission_id)
+
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project submission not found.",
+            )
+
+        if project.guide_id != guide_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not the assigned guide for this project.",
+            )
+
+        if not project.phase_2_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Phase 2 data has not been submitted yet.",
+            )
+
+        if project.current_phase not in {ProjectPhase.PHASE_2, ProjectPhase.FINAL}:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This project is not ready for Phase 2 review.",
+            )
+
+        if project.guide_status != GuideStatus.PENDING:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Project is already {project.guide_status}.",
+            )
+
+        project.guide_status = status
+
+        if feedback:
+            current_data = dict(project.phase_2_data)
+            current_data["guide_feedback"] = feedback
+            project.phase_2_data = current_data
+
+        await db.commit()
+        await db.refresh(project)
+
+        if status == GuideStatus.ACCEPTED:
+            new_eval = await EvaluationService.create_evaluation_record(
+                db=db,
+                submission_id=project.id,
+                faculty_id=guide_id,
+                phase=EvaluationPhase.PHASE_2,
+            )
+            asyncio.create_task(EvaluationService.run_phase_2_analysis(new_eval.id))
+
+        return project
+
+    @staticmethod
+    async def submit_final(
+        db: AsyncSession,
+        submission_id: uuid.UUID,
+        leader_id: uuid.UUID,
+        data: FinalSubmissionSchema,
+    ) -> ProjectSubmission:
+        """
+        Stores the Final project submission after validating Phase 2 completion.
+        """
+        project = await ProjectService.get_submission_by_id(db, submission_id)
+
+        if not project:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
+
+        if project.leader_id != leader_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the leader can submit.")
+
+        # Ensure Phase 2 is completed
+        phase_2_eval = await EvaluationService.get_latest_evaluation(
+            db=db, submission_id=submission_id, phase=EvaluationPhase.PHASE_2
+        )
+        if not phase_2_eval or phase_2_eval.status != EvaluationStatus.COMPLETED:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Phase 2 evaluation must be completed before final submission."
+            )
+
+        project.final_data = data.final_data.model_dump()
+        project.current_phase = ProjectPhase.FINAL
+        project.guide_status = GuideStatus.PENDING
+
+        await db.commit()
+        await db.refresh(project)
+        return project
+
+    @staticmethod
+    async def review_final(
+        db: AsyncSession,
+        submission_id: uuid.UUID,
+        guide_id: uuid.UUID,
+        status: GuideStatus,
+        feedback: Optional[str] = None,
+    ) -> ProjectSubmission:
+        """
+        Guide's final review. Triggers the Chief AI Evaluator.
+        """
+        project = await ProjectService.get_submission_by_id(db, submission_id)
+
+        if not project or project.guide_id != guide_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
+
+        if project.current_phase != ProjectPhase.FINAL:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not in final phase.")
+
+        project.guide_status = status
+        if feedback:
+            current_data = dict(project.final_data) if project.final_data else {}
+            current_data["guide_feedback"] = feedback
+            project.final_data = current_data
+
+        await db.commit()
+        await db.refresh(project)
+
+        if status == GuideStatus.ACCEPTED:
+            new_eval = await EvaluationService.create_evaluation_record(
+                db=db,
+                submission_id=project.id,
+                faculty_id=guide_id,
+                phase=EvaluationPhase.FINAL,
+            )
+            asyncio.create_task(EvaluationService.run_final_analysis(new_eval.id))
 
         return project
 

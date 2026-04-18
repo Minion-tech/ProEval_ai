@@ -248,3 +248,104 @@ class EvaluationService:
                 evaluation.status = EvaluationStatus.FAILED
                 evaluation.ai_narrative = f"Claude API Error: {str(e)}"
                 await db.commit()
+
+    @staticmethod
+    async def run_final_analysis(
+        evaluation_id: uuid.UUID
+    ) -> None:
+        """
+        Final synthesis and comprehensive project evaluation using Claude.
+        """
+        async with AsyncSessionLocal() as db:
+            query = select(Evaluation).where(Evaluation.id == evaluation_id)
+            result = await db.execute(query)
+            evaluation = result.scalar_one_or_none()
+
+            if not evaluation:
+                return
+
+            query_project = select(ProjectSubmission).where(ProjectSubmission.id == evaluation.submission_id)
+            result_project = await db.execute(query_project)
+            project = result_project.scalar_one_or_none()
+
+            if not project or not project.final_data:
+                evaluation.status = EvaluationStatus.FAILED
+                evaluation.ai_narrative = "Error: Missing Final submission data."
+                await db.commit()
+                return
+
+            evaluation.status = EvaluationStatus.IN_PROGRESS
+            await db.commit()
+
+            try:
+                final_payload = project.final_data
+                p1 = project.phase_1_data or {}
+                p2 = project.phase_2_data or {}
+
+                system_prompt = (
+                    "You are the Head of Department and Chief Academic Evaluator. "
+                    "Conduct a final, comprehensive audit of this student project. "
+                    "Synthesize all phases: Proposal, Mid-term, and now the Final Result. "
+                    "Evaluate against: Core Objectives fulfillment, Technical Complexity, Presentation Quality, "
+                    "and Individual Contributions. "
+                    "Return your response in this format: "
+                    "1. Final Score (0-100) "
+                    "2. Letter Grade (A+, A, B, etc.) "
+                    "3. Executive Summary "
+                    "4. Objective Fulfillment Audit "
+                    "5. Individual Contribution Assessment."
+                )
+
+                user_content = (
+                    f"Project Title: {p1.get('title')}\n"
+                    f"Final Report URL: {final_payload.get('final_report_url')}\n"
+                    f"Presentation URL: {final_payload.get('presentation_url')}\n"
+                    f"Demo Video URL: {final_payload.get('demo_video_url')}\n"
+                    f"Code Repository: {final_payload.get('code_repository_url')}\n"
+                    f"Final Outcome Summary: {final_payload.get('final_summary')}\n"
+                    f"Individual Contribution Audit: {final_payload.get('individual_contributions')}\n"
+                )
+
+                message = await anthropic_client.messages.create(
+                    model=settings.CLAUDE_MODEL,
+                    max_tokens=2500,
+                    temperature=0.3,
+                    system=system_prompt,
+                    messages=[
+                        {"role": "user", "content": user_content}
+                    ]
+                )
+
+                ai_text = message.content[0].text
+                evaluation.ai_narrative = ai_text
+                
+                # Logic to extract score and grade
+                score = 80.0
+                grade = "A"
+
+                if "Final Score:" in ai_text:
+                    try:
+                        score_part = ai_text.split("Final Score:")[1].split("/")[0].split("\n")[0].strip()
+                        score = float(score_part.replace("%", ""))
+                    except: pass
+                
+                if "Letter Grade:" in ai_text:
+                    try:
+                        grade = ai_text.split("Letter Grade:")[1].split("\n")[0].strip()
+                    except: pass
+
+                evaluation.total_score = score
+                evaluation.grade = grade
+                evaluation.status = EvaluationStatus.COMPLETED
+                
+                # Mark project as fully complete
+                project.current_phase = ProjectPhase.SUBMITTED # Or COMPLETED
+                
+                await db.commit()
+                print(f"SUCCESS: Final AI Evaluation {evaluation_id} completed via Claude.")
+
+            except Exception as e:
+                print(f"AI ERROR: {str(e)}")
+                evaluation.status = EvaluationStatus.FAILED
+                evaluation.ai_narrative = f"Claude API Error: {str(e)}"
+                await db.commit()

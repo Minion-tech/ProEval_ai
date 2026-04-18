@@ -33,8 +33,16 @@ def create_access_token(
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Checks if a user's login password matches the scrambled version in the DB."""
+    # Bcrypt has a 72-byte limit. We truncate to 72 bytes safely.
+    pwd_bytes = plain_password.encode("utf-8")
+    if len(pwd_bytes) > 72:
+        plain_password = pwd_bytes[:72].decode("utf-8", errors="ignore")
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password: str) -> str:
-    """Scrambles a new password for safe storage in the database."""
+    """Scrambles a new password for safe storage. Truncates to 72 bytes for bcrypt."""
+    # Bcrypt has a 72-byte limit. We truncate to 72 bytes safely.
+    pwd_bytes = password.encode("utf-8")
+    if len(pwd_bytes) > 72:
+        password = pwd_bytes[:72].decode("utf-8", errors="ignore")
     return pwd_context.hash(password)

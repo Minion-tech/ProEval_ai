@@ -55,6 +55,19 @@ class Phase2SubmissionSchema(BaseModel):
 
     phase_2_data: Phase2DataSchema
 
+class FinalDataSchema(BaseModel):
+    """Schema for the final project submission payload."""
+    final_report_url: str = Field(..., min_length=10, description="URL to the final project report (PDF)")
+    presentation_url: str = Field(..., min_length=10, description="URL to the project presentation (PPT/PDF)")
+    demo_video_url: Optional[str] = Field(None, description="URL to the project demo video")
+    code_repository_url: str = Field(..., min_length=10, description="Final repository URL")
+    final_summary: str = Field(..., min_length=100, max_length=5000, description="Comprehensive summary of the project outcome")
+    individual_contributions: str = Field(..., min_length=50, description="Audit of what each member did")
+
+class FinalSubmissionSchema(BaseModel):
+    """Schema for submitting the final project work."""
+    final_data: FinalDataSchema
+
 class TeamJoinSchema(BaseModel):
     """Schema for a student to join an existing team."""
     team_id: str = Field(..., description="Human-readable team ID like TEAM-2025-1234")
@@ -108,4 +121,23 @@ class ProjectSubmissionResponseSchema(BaseModel):
 
     class Config:
         #this is the line which allow us to convert the SQLAlchemy model to pydantic model
+        from_attributes = True
+
+class TeamMemberInfoSchema(BaseModel):
+    """Detailed info about a team member for the UI."""
+    name: str
+    email: str
+    role: str
+    functions: str
+    modules: str
+    is_leader: bool
+
+class MyProjectResponseSchema(BaseModel):
+    """Schema for a student's current active project including teammate info."""
+    project: ProjectSubmissionResponseSchema
+    user_role: str 
+    member_count: int
+    members: List[TeamMemberInfoSchema]
+
+    class Config:
         from_attributes = True

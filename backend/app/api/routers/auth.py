@@ -20,6 +20,10 @@ router = APIRouter(
     tags=["Authentication"]
 )
 
+@router.options("/register")
+async def register_options():
+    return {}
+
 @router.post("/register", status_code=status.HTTP_200_OK)
 async def register_student(
     data: StudentRegister,
@@ -108,3 +112,23 @@ async def read_current_user(
         role=current_user.role.value,
         department=current_user.department,
     )
+
+@router.get("/faculty", response_model=list[CurrentUserResponse])
+async def list_faculty(
+    db: AsyncSession = Depends(get_db),
+    # Optional: current_user: StudentAuth | Faculty = Depends(get_current_user),
+) -> Any:
+    """
+    Returns a list of all faculty members. Used by students to pick a guide.
+    """
+    faculty_list = await AuthService.get_all_faculty(db)
+    return [
+        CurrentUserResponse(
+            id=f.id,
+            name=f.name,
+            email=f.email,
+            role=f.role.value,
+            department=f.department,
+        )
+        for f in faculty_list
+    ]

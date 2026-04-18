@@ -6,9 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 from fastapi import HTTPException, status
 
-from app.db.Models import StudentAuth, Faculty
+from app.db.Models import StudentAuth, Faculty, ProgrammeType
 from app.api.schemas.auth import StudentRegister, OTPVerify
 from app.core.security import get_password_hash, verify_password, create_access_token
+from app.services.email_service import EmailService
 
 # Mock Redis Store (We can implement real Redis later)
 # key: email, value: {code: str, expiry: datetime}
@@ -39,13 +40,31 @@ class AuthService:
         return result.scalar_one_or_none()
 
     @staticmethod
+    async def get_all_faculty(db: AsyncSession) -> list[Faculty]:
+        """Returns a list of all faculty members (potential guides)."""
+        query = select(Faculty).order_by(Faculty.name)
+        result = await db.execute(query)
+        return list(result.scalars().all())
+
+    @staticmethod
+    def _normalize_programme(p: str) -> ProgrammeType:
+        """Helper to convert common strings like 'B.Tech' to 'BTECH' enum."""
+        # Convert to upper, remove dots and spaces
+        p_clean = p.upper().replace(".", "").replace(" ", "")
+        try:
+            return ProgrammeType(p_clean)
+        except ValueError:
+            # Fallback to BTECH
+            return ProgrammeType.BTECH
+
+    @staticmethod
     async def register_student(db: AsyncSession, data: StudentRegister) -> str:
         """
         Handles initial registration:
         1. Checks for existing user.
         2. Generates OTP.
         3. Creates a 'Pending' account (unverified).
-        4. (Soon) Sends OTP email.
+        4. Sends OTP email.
         """
         # 1. Check for duplicates
         existing = await AuthService.get_student_by_email_or_enrollment(
@@ -68,12 +87,17 @@ class AuthService:
             "user_data": data # Temporarily store data until verified
         }
 
-        # 4. MOCK: Print OTP to console for testing
-        print(f"--- [MOCK EMAIL] ---")
-        print(f"To: {data.email}")
-        print(f"Subject: Your Verification Code for ProEval")
-        print(f"Code: {otp_code}")
-        print(f"---------------------")
+        # 4. Send OTP email
+        try:
+            await EmailService.send_otp_email(data.email, otp_code)
+        except Exception as e:
+            # If email fails, cleanup and re-raise
+            if data.email in otp_store:
+                del otp_store[data.email]
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to send verification email. Please try again."
+            )
 
         return f"A verification code has been sent to {data.email}"
 
@@ -100,7 +124,7 @@ class AuthService:
             )
 
         # 3. Check Code
-        if stored_data["code"] != data.otp_code:
+        if stored_data["code"] != data.otp:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid verification code."
@@ -108,12 +132,16 @@ class AuthService:
 
         # 4. Create the Actual User in DB
         user_data: StudentRegister = stored_data["user_data"]
+        
+        # Normalize programme string to Enum
+        programme_enum = AuthService._normalize_programme(user_data.programme)
+
         new_student = StudentAuth(
             name=user_data.name,
             email=user_data.email,
             enrollment_no=user_data.enrollment_no,
             password_hash=get_password_hash(user_data.password),
-            programme=user_data.programme,
+            programme=programme_enum,
             department=user_data.department,
             batch=user_data.batch,
             is_verified=True
@@ -123,7 +151,14 @@ class AuthService:
         await db.commit()
         await db.refresh(new_student)
 
-        # 5. Cleanup OTP store
+        # 5. Send welcome email (don't fail the registration if this fails)
+        try:
+            await EmailService.send_welcome_email(user_data.email, user_data.name)
+        except Exception as e:
+            # Log the error but don't fail registration
+            print(f"Failed to send welcome email to {user_data.email}: {e}")
+
+        # 6. Cleanup OTP store
         del otp_store[data.email]
 
         return new_student

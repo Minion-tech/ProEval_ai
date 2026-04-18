@@ -7,16 +7,16 @@ class StudentRegister(BaseModel):
     """Schema for new student registration."""
     name: str = Field(..., min_length=2, max_length=255)
     email: EmailStr
-    enrollment_no: str = Field(..., min_length=5, max_length=50)
+    enrollment_no: str = Field(..., min_length=2, max_length=50)
     password: str = Field(..., min_length=8)
-    programme: ProgrammeType
+    programme: str = Field(..., min_length=2, max_length=50)
     department: str = Field(..., min_length=2, max_length=255)
     batch: str = Field(..., example="2024-2028")
 
 class OTPVerify(BaseModel):
     """Schema for verifying the 6-digit OTP sent to email."""
     email: EmailStr
-    otp_code: str = Field(..., min_length=6, max_length=6)
+    otp: str = Field(..., min_length=6, max_length=6)
 
 class LoginRequest(BaseModel):
     """Schema for the shared student/faculty login request."""
