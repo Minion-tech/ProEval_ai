@@ -7,9 +7,11 @@ from app.db.Models import EvaluationPhase, EvaluationStatus
 #phase 1  Form Data
 class Phase1DataSchema(BaseModel):
     title: str = Field(..., min_length=10, max_length=500, description="Project title")
-    abstract: str = Field(..., min_length=50, max_length=2000, description="A detailed summary of the project")
+    abstract: str = Field(..., min_length=50, max_length=2000, description="Primary project objective")
     domain: str = Field(..., example = "Artificial Intelligence/Machine Learning")
     objectives: List[str] = Field(..., min_items=1, description="List of the key goals")
+    methodology: str = Field(..., min_length=50, max_length=3000, description="Planned methodology or implementation approach")
+    use_case_diagram: str = Field(..., min_length=20, description="Uploaded use case diagram as a data URL")
     tech_stack: List[str] = Field(..., min_items=1, description="Technologies to be used")
 
 # the request schema what  the student  send 
@@ -134,10 +136,39 @@ class TeamMemberInfoSchema(BaseModel):
 
 class MyProjectResponseSchema(BaseModel):
     """Schema for a student's current active project including teammate info."""
-    project: ProjectSubmissionResponseSchema
-    user_role: str 
-    member_count: int
-    members: List[TeamMemberInfoSchema]
+    project: Optional[ProjectSubmissionResponseSchema] = None
+    user_role: Optional[str] = None
+    member_count: int = 0
+    members: List[TeamMemberInfoSchema] = []
+    previous_projects: List[ProjectSubmissionResponseSchema] = []
 
     class Config:
         from_attributes = True
+
+
+class ProposalWithEvalSchema(BaseModel):
+    """One Phase 1 proposal with its AI evaluation summary, used on the compare page."""
+    id: UUID
+    team_id: str
+    attempt_number: int
+    phase_1_data: Optional[dict] = None
+    evaluation_status: Optional[str] = None
+    evaluation_score: Optional[float] = None
+    evaluation_grade: Optional[str] = None
+    evaluation_summary: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class MyProposalsResponseSchema(BaseModel):
+    """All Phase 1 proposals for the student together with AI comparison data."""
+    proposals: List[ProposalWithEvalSchema]
+    can_submit_more: bool
+    total_proposals: int
+    ai_recommendation_id: Optional[str] = None  # UUID str of highest-scoring proposal
+
+    class Config:
+        from_attributes = True
+

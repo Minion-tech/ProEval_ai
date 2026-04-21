@@ -69,6 +69,8 @@ async def get_current_student(
     return current_user
 
 
+from app.db.Models.users import FacultyRole
+
 async def get_current_faculty(
     current_user: Union[StudentAuth, Faculty] = Depends(get_current_user),
 ) -> Faculty:
@@ -77,5 +79,17 @@ async def get_current_faculty(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Faculty access required.",
+        )
+    return current_user
+
+
+async def get_current_admin(
+    current_user: Union[StudentAuth, Faculty] = Depends(get_current_user),
+) -> Faculty:
+    """Restrict an endpoint to authenticated Admins only."""
+    if not isinstance(current_user, Faculty) or current_user.role != FacultyRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required.",
         )
     return current_user

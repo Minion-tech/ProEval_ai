@@ -30,13 +30,14 @@ class Settings(BaseSettings):
 
     # AI Agents (Anthropic Claude)
     ANTHROPIC_API_KEY: str = ""
-    CLAUDE_MODEL: str = "claude-sonnet-4-6"
+    CLAUDE_MODEL: str = "claude-3-5-sonnet-20241022"
 
     # Auth
     JWT_SECRET: str = "CHANGE_ME_TO_A_LONG_RANDOM_STRING"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days for development
 
     # Email Configuration (For OTP)
+    OTP_ENABLED: bool = True
     MAIL_USERNAME: str = ""
     MAIL_PASSWORD: str = ""
     MAIL_FROM: str = "noreply@proeval.ai"

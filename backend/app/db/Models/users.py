@@ -21,6 +21,7 @@ class Faculty(Base, TimestampMixin):
         nullable=False
     )
     department: Mapped[Optional[str]] = mapped_column(String(255))
+    specialization: Mapped[Optional[str]] = mapped_column(String(255))
 
 class ProgrammeType(str, enum.Enum):
     BTECH = "BTECH"
@@ -44,6 +45,23 @@ class StudentAuth(Base, TimestampMixin):
     department: Mapped[str] = mapped_column(String(255), nullable=False)
     batch: Mapped[str] = mapped_column(String(10), nullable=False) # e.g., "2024-2028"
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+
+class PreApprovedStudent(Base, TimestampMixin):
+    """A whitelist of students allowed to register for the portal."""
+    __tablename__ = "pre_approved_students"
+
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    enrollment_no: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
+    email: Mapped[Optional[str]] = mapped_column(String(255), unique=True, index=True, nullable=True)
+    
+    programme: Mapped[ProgrammeType] = mapped_column(
+        Enum(ProgrammeType),
+        default=ProgrammeType.BTECH,
+        nullable=False
+    )
+    department: Mapped[str] = mapped_column(String(255), nullable=False)
+    batch: Mapped[str] = mapped_column(String(10), nullable=False)
+    is_registered: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 

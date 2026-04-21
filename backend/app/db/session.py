@@ -1,28 +1,36 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession    
 from app.core.config import settings  
 
-# 1. Create the Async Engine
-# We link echo to settings.DEBUG so we don't spam logs in production
-engine = create_async_engine(
-    settings.DATABASE_URL,
-    echo=settings.DEBUG,
-    future=True
-)
+# Engine and session factory (lazily initialized)
+engine = None
+AsyncSessionLocal = None
 
-# 2. Create Session Factory
-# expire_on_commit=False is crucial for async to prevent "greenlet errors"
-AsyncSessionLocal = async_sessionmaker(
-    bind=engine,
-    class_=AsyncSession,
-    autoflush=False,
-    expire_on_commit=False
-)
+def get_engine():
+    """Lazy initialization of async engine to avoid event loop issues at import time"""
+    global engine
+    if engine is None:
+        engine = create_async_engine(
+            settings.DATABASE_URL,
+            echo=settings.DEBUG,
+            future=True,
+            connect_args={"timeout": 10}
+        )
+    return engine
+
+def get_session_factory():
+    """Lazy initialization of session factory"""
+    global AsyncSessionLocal
+    if AsyncSessionLocal is None:
+        AsyncSessionLocal = async_sessionmaker(
+            bind=get_engine(),
+            class_=AsyncSession,
+            autoflush=False,
+            expire_on_commit=False
+        )
+    return AsyncSessionLocal
 
 # 3. Dependency to get DB session in FastAPI routes
 # This ensures every request gets its own session and closes it automatically 
 async def get_db():
-    async with AsyncSessionLocal() as session:
-        try:
-            yield session
-        finally:
-            await session.close()
+    async with get_session_factory()() as session:
+        yield session

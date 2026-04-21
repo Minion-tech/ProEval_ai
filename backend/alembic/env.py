@@ -23,24 +23,14 @@ if config.config_file_name is not None:
 # 4. Set the target metadata for 'autogenerate' support
 target_metadata = Base.metadata
 
-# 5. Get the Database URL from your app settings
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# 5. We bypass set_main_option to avoid "interpolation" errors with passwords containing '%' (e.g., %40)
+# config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode.
-
-    This configures the context with just a URL
-    and not an Engine, though an Engine is also acceptable
-    here.  By skipping the Engine creation we don't even need a
-    DBAPI to be available.
-
-    Calls to context.execute() here emit the given string to the
-    script output.
-
-    """
-    url = config.get_main_option("sqlalchemy.url")
+    """Run migrations in 'offline' mode."""
+    # We use settings.DATABASE_URL directly to avoid '%' interpolation errors
     context.configure(
-        url=url,
+        url=settings.DATABASE_URL,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -58,14 +48,11 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_migrations_online() -> None:
-    """Run migrations in 'online' mode.
-
-    In this scenario we need to create an Engine
-    and associate a connection with the context.
-
-    """
+    """Run migrations in 'online' mode."""
+    # We pass the URL directly to async_engine_from_config to avoid '%' interpolation errors
     connectable = async_engine_from_config(
         config.get_section(config.config_ini_section, {}),
+        url=settings.DATABASE_URL,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

@@ -4,15 +4,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from anthropic import AsyncAnthropic
 
+from sqlalchemy.orm import joinedload
 from app.db.Models import (
     Evaluation,
     ProjectSubmission,
+    TeamMembership,
     EvaluationPhase,
     EvaluationStatus,
     GuideStatus,
     ProjectPhase,
 )
-from app.db.session import AsyncSessionLocal
+from app.db.session import get_session_factory
 from app.core.config import settings
 
 # Initialize the Anthropic Client
@@ -80,9 +82,9 @@ class EvaluationService:
         evaluation_id: uuid.UUID
     ):
         """
-        Real AI Analysis using Anthropic Claude.
+        Real AI Analysis using Anthropic Claude with Personalized Mentorship.
         """
-        async with AsyncSessionLocal() as db:
+        async with get_session_factory()() as db:
             # 1. Fetch the records
             query = select(Evaluation).where(Evaluation.id == evaluation_id)
             result = await db.execute(query)
@@ -91,9 +93,14 @@ class EvaluationService:
             if not evaluation:
                 return
 
-            query_project = select(ProjectSubmission).where(ProjectSubmission.id == evaluation.submission_id)
+            # Fetch project with team members
+            query_project = select(ProjectSubmission).where(
+                ProjectSubmission.id == evaluation.submission_id
+            ).options(
+                joinedload(ProjectSubmission.members).joinedload(TeamMembership.student)
+            )
             result_project = await db.execute(query_project)
-            project = result_project.scalar_one_or_none()
+            project = result_project.unique().scalar_one_or_none()
 
             if not project or not project.phase_1_data:
                 evaluation.status = EvaluationStatus.FAILED
@@ -106,26 +113,41 @@ class EvaluationService:
             await db.commit()
 
             try:
-                # 3. Construct the AI Prompt
-                # We feed the student's proposal into the prompt
+                # 3. Construct the Personalized Info
+                member_details = []
+                for m in project.members:
+                    member_details.append(
+                        f"- {m.student.name} (Role: {m.role}, Skills: {m.tech_stack or 'None listed'})"
+                    )
+
                 proposal = project.phase_1_data
                 system_prompt = (
-                    "You are a Senior Academic Evaluator at a top Technical University. "
-                    "Your task is to analyze a student's 'Phase 1: Project Proposal'. "
-                    "You must provide rigorous, professional, and actionable feedback. "
-                    "Focus on: Technical Feasibility, Scope Clarity, and Innovation. "
-                    "Return your response in a clear format: "
-                    "1. Score (0-10) "
-                    "2. Detailed Feedback (Narrative) "
-                    "3. Suggestions for Phase 2."
+                    "You are a Senior Academic Mentor at a Technical University. "
+                    "Analyze this student 'Phase 1: Project Proposal'. "
+                    "Provide a high-quality, encouraging, and personalized mentorship report. "
+                    "Structure your response exactly as follows:\n\n"
+                    "VERDICT: [Score 0-10] [One-sentence summary]\n\n"
+                    "PILLARS:\n"
+                    "- Clarity: [High/Med/Low] - [Reason]\n"
+                    "- Feasibility: [High/Med/Low] - [Reason]\n"
+                    "- Innovation: [High/Med/Low] - [Reason]\n\n"
+                    "TEAM INSIGHTS:\n"
+                    "[For each member provided, give one tip matching their skills to the project needs]\n\n"
+                    "TOP 3 REFINEMENTS:\n"
+                    "1. [Actionable step]\n"
+                    "2. [Actionable step]\n"
+                    "3. [Actionable step]"
                 )
 
                 user_content = (
                     f"Project Title: {proposal.get('title')}\n"
-                    f"Abstract: {proposal.get('abstract')}\n"
                     f"Domain: {proposal.get('domain')}\n"
+                    f"Project Objective: {proposal.get('abstract')}\n"
                     f"Objectives: {', '.join(proposal.get('objectives', []))}\n"
-                    f"Tech Stack: {', '.join(proposal.get('tech_stack', []))}\n"
+                    f"Methodology: {proposal.get('methodology')}\n"
+                    f"Use Case Diagram Uploaded: {'Yes' if proposal.get('use_case_diagram') else 'No'}\n"
+                    f"Project Tech Stack: {', '.join(proposal.get('tech_stack', []))}\n\n"
+                    f"The Team:\n" + "\n".join(member_details)
                 )
 
                 # 4. Call Claude API
@@ -139,31 +161,36 @@ class EvaluationService:
                     ]
                 )
 
-                # 5. Extract the content
+                # 5. Extract and Save
                 ai_text = message.content[0].text
-                
-                # Simple extraction of score (In a real app, we'd use structured output/pydantic)
-                # For now, we save the full text and a generic score
                 evaluation.ai_narrative = ai_text
-                evaluation.total_score = 7.0 # Default if we can't parse easily
                 
-                # Try to parse a score if the AI provided one (e.g., 'Score: 8.5/10')
-                if "Score:" in ai_text:
+                # Try to parse the score
+                if "VERDICT: " in ai_text:
                     try:
-                        score_part = ai_text.split("Score:")[1].split("/")[0].strip()
-                        evaluation.total_score = float(score_part)
+                        score_part = ai_text.split("VERDICT:")[1].split("/")[0].strip()
+                        # Extract first number found
+                        import re
+                        match = re.search(r"\d+(\.\d+)?", score_part)
+                        if match:
+                            evaluation.total_score = float(match.group())
                     except:
-                        pass
+                        evaluation.total_score = 7.0
 
                 evaluation.status = EvaluationStatus.COMPLETED
-                project.current_phase = ProjectPhase.PHASE_2
+                
+                # Only move to Phase 2 if score is decent (e.g. >= 5)
+                # This acts as the automated gatekeeper
+                if evaluation.total_score >= 5.0:
+                    project.current_phase = ProjectPhase.PHASE_2
+                
                 await db.commit()
-                print(f"SUCCESS: AI Evaluation {evaluation_id} completed via Claude.")
+                print(f"SUCCESS: Personalized AI Mentorship {evaluation_id} completed.")
 
             except Exception as e:
                 print(f"AI ERROR: {str(e)}")
                 evaluation.status = EvaluationStatus.FAILED
-                evaluation.ai_narrative = f"Claude API Error: {str(e)}"
+                evaluation.ai_narrative = f"Mentorship Error: {str(e)}"
                 await db.commit()
 
     @staticmethod
@@ -173,7 +200,7 @@ class EvaluationService:
         """
         Mid-term architecture and progress analysis using Claude.
         """
-        async with AsyncSessionLocal() as db:
+        async with get_session_factory()() as db:
             query = select(Evaluation).where(Evaluation.id == evaluation_id)
             result = await db.execute(query)
             evaluation = result.scalar_one_or_none()
@@ -256,7 +283,7 @@ class EvaluationService:
         """
         Final synthesis and comprehensive project evaluation using Claude.
         """
-        async with AsyncSessionLocal() as db:
+        async with get_session_factory()() as db:
             query = select(Evaluation).where(Evaluation.id == evaluation_id)
             result = await db.execute(query)
             evaluation = result.scalar_one_or_none()
@@ -349,3 +376,64 @@ class EvaluationService:
                 evaluation.status = EvaluationStatus.FAILED
                 evaluation.ai_narrative = f"Claude API Error: {str(e)}"
                 await db.commit()
+
+    @staticmethod
+    async def generate_member_orientation(member_id: uuid.UUID):
+        """
+        AI generates a personalized onboarding report for a new teammate.
+        """
+        async with get_session_factory()() as db:
+            # 1. Fetch the member with their project and student details
+            query = select(TeamMembership).where(TeamMembership.id == member_id).options(
+                joinedload(TeamMembership.submission),
+                joinedload(TeamMembership.student)
+            )
+            result = await db.execute(query)
+            member = result.scalar_one_or_none()
+            
+            if not member or not member.submission:
+                return
+
+            project = member.submission
+            proposal = project.phase_1_data or {}
+
+            # 2. Construct the Mentorship Prompt
+            system_prompt = (
+                "You are an AI Technical Project Manager. A student has just joined a project team. "
+                "Your task is to welcome them and provide a 'Role-Based Technical Orientation'. "
+                "Be encouraging, professional, and highly specific to their role. "
+                "Structure your response exactly as follows:\n\n"
+                "WELCOME: [Personalized greeting]\n\n"
+                "ROLE CONTEXT: [Explain how their role contributes to the project vision]\n\n"
+                "TECHNICAL ROADMAP: [3-4 specific technical steps or tools they should explore based on their role and skills]\n\n"
+                "FIRST TASK: [One immediate 'Quick Win' task they can do today]"
+            )
+
+            user_content = (
+                f"Project Title: {proposal.get('title')}\n"
+                f"Project Abstract: {proposal.get('abstract')}\n"
+                f"Student Name: {member.student.name}\n"
+                f"Assigned Role: {member.role}\n"
+                f"Student Skills (Tech Stack): {member.tech_stack or 'General/TBD'}\n"
+                f"Expected Contribution: {member.work_description or 'Project development'}"
+            )
+
+            try:
+                # 3. Call Claude API
+                message = await anthropic_client.messages.create(
+                    model=settings.CLAUDE_MODEL,
+                    max_tokens=1000,
+                    temperature=0.7,
+                    system=system_prompt,
+                    messages=[{"role": "user", "content": user_content}]
+                )
+
+                # 4. Save the orientation to ai_feedback JSON column
+                member.ai_feedback = {
+                    "orientation": message.content[0].text
+                }
+                await db.commit()
+                print(f"SUCCESS: AI Orientation generated for member {member.student.name}")
+
+            except Exception as e:
+                print(f"AI ORIENTATION ERROR: {str(e)}")

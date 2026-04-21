@@ -17,6 +17,12 @@ class GuideStatus(str, enum.Enum):
     ACCEPTED = "ACCEPTED"
     REJECTED = "REJECTED"
 
+class AdminStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    REVISION_REQUESTED = "REVISION_REQUESTED"
+
 class ProjectSubmission(Base, TimestampMixin):
     """The central model for student project evaluations."""
     
@@ -45,9 +51,24 @@ class ProjectSubmission(Base, TimestampMixin):
         default=GuideStatus.PENDING,
         nullable=False
     )
+
+    admin_status: Mapped[AdminStatus] = mapped_column(
+        Enum(AdminStatus),
+        default=AdminStatus.PENDING,
+        nullable=False
+    )
+
+    admin_feedback: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
     academic_year: Mapped[str] = mapped_column(String(10), nullable=False) # e.g., "2025-26"
     semester: Mapped[int] = mapped_column(Integer, nullable=False)
+    
+    # Multi-proposal support (up to 3 Phase 1 proposals before selection)
+    attempt_number: Mapped[int] = mapped_column(Integer, default=1, nullable=False, server_default="1")
+
+    # Soft Deletion (For Admin resets)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    deleted_by_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     
     # SQLAlchemy Relationships
     leader = relationship("StudentAuth", backref="led_submissions")
@@ -67,6 +88,11 @@ class TeamMembership(Base, TimestampMixin):
     functions: Mapped[str] = mapped_column(Text, nullable=False) # Detailed description of duties
     modules: Mapped[str] = mapped_column(Text, nullable=False) # List of codebase components worked on
     
+    # New fields for AI decision support (Architecture v3.0)
+    work_description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    tech_stack: Mapped[Optional[str]] = mapped_column(Text, nullable=True) 
+    ai_feedback: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True) # {skill_gap_alerts: List[str], workload_balance: float}
+
     # SQLAlchemy Relationships
     submission = relationship("ProjectSubmission", back_populates="members")
     student = relationship("StudentAuth", backref="memberships")

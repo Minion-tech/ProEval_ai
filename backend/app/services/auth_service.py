@@ -6,8 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 from fastapi import HTTPException, status
 
-from app.db.Models import StudentAuth, Faculty, ProgrammeType
+from app.db.Models import StudentAuth, Faculty, ProgrammeType, PreApprovedStudent
 from app.api.schemas.auth import StudentRegister, OTPVerify
+from app.core.config import settings
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.services.email_service import EmailService
 
@@ -62,11 +63,30 @@ class AuthService:
         """
         Handles initial registration:
         1. Checks for existing user.
-        2. Generates OTP.
-        3. Creates a 'Pending' account (unverified).
+        2. Checks whitelist.
+        3. Generates OTP.
         4. Sends OTP email.
         """
-        # 1. Check for duplicates
+        # 1. NEW: Check if student is in the Pre-Approved whitelist
+        whitelist_query = select(PreApprovedStudent).where(
+            PreApprovedStudent.enrollment_no == data.enrollment_no
+        )
+        whitelist_result = await db.execute(whitelist_query)
+        approved_student = whitelist_result.scalar_one_or_none()
+
+        if not approved_student:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your enrollment number is not in the pre-approved list. Please contact Admin."
+            )
+
+        if approved_student.is_registered:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This enrollment number has already been used to create an account."
+            )
+
+        # 2. Check for duplicates
         existing = await AuthService.get_student_by_email_or_enrollment(
             db, data.email, data.enrollment_no
         )
@@ -76,10 +96,10 @@ class AuthService:
                 detail="Email or Enrollment Number already registered."
             )
 
-        # 2. Generate a 6-digit OTP
+        # 3. Generate a 6-digit OTP
         otp_code = ''.join(random.choices(string.digits, k=6))
         
-        # 3. Store OTP with 5-minute expiry
+        # 4. Store OTP with 5-minute expiry
         # In production, we use Redis for this!
         otp_store[data.email] = {
             "code": otp_code,
@@ -87,19 +107,21 @@ class AuthService:
             "user_data": data # Temporarily store data until verified
         }
 
-        # 4. Send OTP email
-        try:
-            await EmailService.send_otp_email(data.email, otp_code)
-        except Exception as e:
-            # If email fails, cleanup and re-raise
-            if data.email in otp_store:
-                del otp_store[data.email]
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to send verification email. Please try again."
-            )
+        # 5. Send OTP email only when OTP is enabled
+        if settings.OTP_ENABLED:
+            try:
+                await EmailService.send_otp_email(data.email, otp_code)
+            except Exception as e:
+                # If email fails, cleanup and re-raise
+                if data.email in otp_store:
+                    del otp_store[data.email]
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to send verification email. Please try again."
+                )
+            return f"A verification code has been sent to {data.email}"
 
-        return f"A verification code has been sent to {data.email}"
+        return "OTP is temporarily disabled for testing. Continue to verification with any 6-digit code."
 
     @staticmethod
     async def verify_otp_and_create_user(db: AsyncSession, data: OTPVerify) -> StudentAuth:
@@ -123,16 +145,32 @@ class AuthService:
                 detail="OTP expired. Please register again."
             )
 
-        # 3. Check Code
-        if stored_data["code"] != data.otp:
+        # 3. Check Code only when OTP is enabled
+        if settings.OTP_ENABLED and stored_data["code"] != data.otp:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid verification code."
             )
 
-        # 4. Create the Actual User in DB
+        # 4. Final Security Check: Mark as registered in Whitelist
         user_data: StudentRegister = stored_data["user_data"]
         
+        whitelist_query = select(PreApprovedStudent).where(
+            PreApprovedStudent.enrollment_no == user_data.enrollment_no
+        )
+        whitelist_result = await db.execute(whitelist_query)
+        approved_student = whitelist_result.scalar_one_or_none()
+
+        if not approved_student or approved_student.is_registered:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Authorization failed. Whitelist error."
+            )
+
+        approved_student.is_registered = True
+        db.add(approved_student)
+
+        # 5. Create the Actual User in DB
         # Normalize programme string to Enum
         programme_enum = AuthService._normalize_programme(user_data.programme)
 
@@ -151,14 +189,14 @@ class AuthService:
         await db.commit()
         await db.refresh(new_student)
 
-        # 5. Send welcome email (don't fail the registration if this fails)
+        # 6. Send welcome email (don't fail the registration if this fails)
         try:
             await EmailService.send_welcome_email(user_data.email, user_data.name)
         except Exception as e:
             # Log the error but don't fail registration
             print(f"Failed to send welcome email to {user_data.email}: {e}")
 
-        # 6. Cleanup OTP store
+        # 7. Cleanup OTP store
         del otp_store[data.email]
 
         return new_student

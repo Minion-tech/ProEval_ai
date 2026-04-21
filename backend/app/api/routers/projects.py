@@ -14,6 +14,7 @@ from app.api.schemas.projects import (
     TeamJoinSchema,
     TeamMembershipResponseSchema,
     MyProjectResponseSchema,
+    MyProposalsResponseSchema,
     FinalSubmissionSchema,
 )
 from app.services.evaluation_service import EvaluationService
@@ -100,6 +101,42 @@ async def create_new_project(
             detail="An unexpected error occurred while creating the project.",
         )
 
+
+@router.patch(
+    "/{submission_id}/phase-1",
+    response_model=ProjectSubmissionResponseSchema,
+)
+async def resubmit_phase_1(
+    submission_id: UUID,
+    data: ProjectSubmissionCreateSchema,
+    db: AsyncSession = Depends(get_db),
+    current_student: StudentAuth = Depends(get_current_student),
+) -> ProjectSubmissionResponseSchema:
+    """Edit and resubmit the same Phase 1 project."""
+    return await ProjectService.update_phase_1_submission(
+        db=db,
+        submission_id=submission_id,
+        leader_id=current_student.id,
+        data=data,
+    )
+
+
+@router.post(
+    "/{submission_id}/phase-1/send-to-guide",
+    response_model=ProjectSubmissionResponseSchema,
+)
+async def send_phase_1_to_guide(
+    submission_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_student: StudentAuth = Depends(get_current_student),
+) -> ProjectSubmissionResponseSchema:
+    """Mark the project as sent to guide after student reviews AI feedback."""
+    return await ProjectService.send_phase_1_to_guide(
+        db=db,
+        submission_id=submission_id,
+        leader_id=current_student.id,
+    )
+
 @router.get("/my-project", response_model=Optional[MyProjectResponseSchema])
 async def get_my_active_project(
     db: AsyncSession = Depends(get_db),
@@ -107,6 +144,38 @@ async def get_my_active_project(
 ) -> Any:
     """Returns the student's current active project membership details."""
     return await ProjectService.get_my_project(db, current_student.id)
+
+
+@router.get("/my-proposals", response_model=MyProposalsResponseSchema)
+async def get_my_proposals(
+    db: AsyncSession = Depends(get_db),
+    current_student: StudentAuth = Depends(get_current_student),
+) -> Any:
+    """
+    Returns all Phase 1 proposals the student has submitted (up to 3),
+    each with their AI evaluation status and score for comparison.
+    """
+    return await ProjectService.get_my_proposals(db, current_student.id)
+
+
+@router.post(
+    "/select-proposal/{submission_id}",
+    response_model=ProjectSubmissionResponseSchema,
+)
+async def select_proposal(
+    submission_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_student: StudentAuth = Depends(get_current_student),
+) -> Any:
+    """
+    Student selects their preferred Phase 1 proposal.
+    All other pending proposals for the same semester are soft-deleted.
+    """
+    return await ProjectService.select_proposal(
+        db=db,
+        student_id=current_student.id,
+        submission_id=submission_id,
+    )
 
 @router.patch("/{submission_id}/approve", response_model=ProjectSubmissionResponseSchema)
 async def approve_project(
