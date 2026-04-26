@@ -84,6 +84,25 @@ class EvaluationService:
         """
         Real AI Analysis using Anthropic Claude with Personalized Mentorship.
         """
+        try:
+            await EvaluationService._run_phase_1_analysis_inner(evaluation_id)
+        except Exception as e:
+            print(f"FATAL: phase-1 task crashed before inner handler: {e}")
+            try:
+                async with get_session_factory()() as db:
+                    result = await db.execute(
+                        select(Evaluation).where(Evaluation.id == evaluation_id)
+                    )
+                    ev = result.scalar_one_or_none()
+                    if ev and ev.status not in (EvaluationStatus.COMPLETED, EvaluationStatus.FAILED):
+                        ev.status = EvaluationStatus.FAILED
+                        ev.ai_narrative = f"Internal error: {str(e)}"
+                        await db.commit()
+            except Exception:
+                pass
+
+    @staticmethod
+    async def _run_phase_1_analysis_inner(evaluation_id: uuid.UUID):
         async with get_session_factory()() as db:
             # 1. Fetch the records
             query = select(Evaluation).where(Evaluation.id == evaluation_id)

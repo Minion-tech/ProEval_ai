@@ -76,6 +76,8 @@ class TeamJoinSchema(BaseModel):
     role: str = Field(..., min_length=2, max_length=100, example="Frontend Developer")
     functions: str = Field(..., min_length=10, description="What specific tasks will you handle?")
     modules: str = Field(..., min_length=5, description="Which parts of the code will you work on?")
+    tech_stack: Optional[str] = Field(None, description="Skills/technologies the member brings")
+    work_description: Optional[str] = Field(None, description="Detailed contribution plan")
 
 class TeamMembershipResponseSchema(BaseModel):
     """Schema representing a team member record."""

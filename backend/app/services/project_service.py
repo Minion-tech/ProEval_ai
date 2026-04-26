@@ -671,7 +671,9 @@ class ProjectService:
             student_id=student_id,
             role=data.role,
             functions=data.functions,
-            modules=data.modules
+            modules=data.modules,
+            tech_stack=data.tech_stack,
+            work_description=data.work_description,
         )
         db.add(new_member)
         await db.commit()

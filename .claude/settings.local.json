@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(sc.exe start postgresql-x64-18 2>&1)"
+    ]
+  }
+}

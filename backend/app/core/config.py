@@ -30,7 +30,7 @@ class Settings(BaseSettings):
 
     # AI Agents (Anthropic Claude)
     ANTHROPIC_API_KEY: str = ""
-    CLAUDE_MODEL: str = "claude-3-5-sonnet-20241022"
+    CLAUDE_MODEL: str = "claude-sonnet-4-6"
 
     # Auth
     JWT_SECRET: str = "CHANGE_ME_TO_A_LONG_RANDOM_STRING"
