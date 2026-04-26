@@ -15,6 +15,7 @@ from app.api.schemas.admin import (
 )
 from app.api.schemas.projects import ProjectSubmissionResponseSchema
 from app.services.admin_service import AdminService
+from app.services.notification_service import NotificationService
 
 router = APIRouter()
 
@@ -91,6 +92,19 @@ async def delete_project(
 ):
     """Soft-delete a project (Admin only). Resets student dashboard."""
     return await AdminService.delete_project(db, project_id)
+
+@router.post("/projects/{project_id}/send-to-guide")
+async def send_project_to_guide(
+    project_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Send a Phase 1 project to its assigned guide (Admin only). Creates a notification and adds to guide's teams."""
+    notification = await NotificationService.send_project_to_guide(db, project_id)
+    return {
+        "status": "sent",
+        "notification_id": str(notification.id),
+        "message": "Project sent to guide successfully"
+    }
 
 # --- STUDENT MANAGEMENT ---
 

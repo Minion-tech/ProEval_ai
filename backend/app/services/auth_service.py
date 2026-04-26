@@ -67,24 +67,26 @@ class AuthService:
         3. Generates OTP.
         4. Sends OTP email.
         """
-        # 1. NEW: Check if student is in the Pre-Approved whitelist
-        whitelist_query = select(PreApprovedStudent).where(
-            PreApprovedStudent.enrollment_no == data.enrollment_no
-        )
-        whitelist_result = await db.execute(whitelist_query)
-        approved_student = whitelist_result.scalar_one_or_none()
-
-        if not approved_student:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Your enrollment number is not in the pre-approved list. Please contact Admin."
+        # 1. Check if student is in the Pre-Approved whitelist (skipped in dev/test mode)
+        approved_student = None
+        if settings.OTP_ENABLED:
+            whitelist_query = select(PreApprovedStudent).where(
+                PreApprovedStudent.enrollment_no == data.enrollment_no
             )
+            whitelist_result = await db.execute(whitelist_query)
+            approved_student = whitelist_result.scalar_one_or_none()
 
-        if approved_student.is_registered:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="This enrollment number has already been used to create an account."
-            )
+            if not approved_student:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Your enrollment number is not in the pre-approved list. Please contact Admin."
+                )
+
+            if approved_student.is_registered:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="This enrollment number has already been used to create an account."
+                )
 
         # 2. Check for duplicates
         existing = await AuthService.get_student_by_email_or_enrollment(
@@ -152,23 +154,24 @@ class AuthService:
                 detail="Invalid verification code."
             )
 
-        # 4. Final Security Check: Mark as registered in Whitelist
+        # 4. Mark as registered in Whitelist (skipped in dev/test mode)
         user_data: StudentRegister = stored_data["user_data"]
-        
-        whitelist_query = select(PreApprovedStudent).where(
-            PreApprovedStudent.enrollment_no == user_data.enrollment_no
-        )
-        whitelist_result = await db.execute(whitelist_query)
-        approved_student = whitelist_result.scalar_one_or_none()
 
-        if not approved_student or approved_student.is_registered:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Authorization failed. Whitelist error."
+        if settings.OTP_ENABLED:
+            whitelist_query = select(PreApprovedStudent).where(
+                PreApprovedStudent.enrollment_no == user_data.enrollment_no
             )
+            whitelist_result = await db.execute(whitelist_query)
+            approved_student = whitelist_result.scalar_one_or_none()
 
-        approved_student.is_registered = True
-        db.add(approved_student)
+            if not approved_student or approved_student.is_registered:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Authorization failed. Whitelist error."
+                )
+
+            approved_student.is_registered = True
+            db.add(approved_student)
 
         # 5. Create the Actual User in DB
         # Normalize programme string to Enum

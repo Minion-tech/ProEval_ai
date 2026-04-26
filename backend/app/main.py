@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 from app.core.config import settings
-from app.api.routers import projects, auth, admin
+from app.api.routers import projects, auth, admin, faculty
 
 # 1. Initialize the FastAPI app
 app = FastAPI(
@@ -42,6 +42,7 @@ app.add_middleware(
 app.include_router(projects.router, prefix=settings.API_V1_STR)
 app.include_router(auth.router, prefix=settings.API_V1_STR)
 app.include_router(admin.router, prefix=f"{settings.API_V1_STR}/admin", tags=["admin"])
+app.include_router(faculty.router, prefix=f"{settings.API_V1_STR}/faculty", tags=["faculty"])
 
 # 4. Root endpoint for sanity check
 @app.get("/", tags=["Health"])
