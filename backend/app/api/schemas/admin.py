@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field, EmailStr
 from uuid import UUID
 from typing import Optional, List
 import enum
-from app.db.Models.users import FacultyRole, ProgrammeType
+from app.db.Models.users import AdminRole, ProgrammeType
 
 # we define the possible choice for an admin's decision
 class AdminDecision(str, enum.Enum):
@@ -20,29 +20,21 @@ class AdminProjectActionSchema(BaseModel):
     #optionall feedback for the student 
     feedback: Optional[str] = Field(None, max_length=1000, description="Optional feedback for the student regarding the decision")
 
-#3 this is the blueprint specifically for replacing a guide    
-class AdminReplaceGuideSchema(BaseModel):
-    """Schema for admin to forcibly assign a new guide to a project."""
-    project_id: UUID = Field(..., description="The ID of the project for which to replace the guide")
-    new_guide_id: UUID = Field(..., description="The ID of the new guide to assign")
+class AdminCreateSchema(BaseModel):
+    """Schema for an Admin to create a new Admin account."""
 
-class FacultyCreateSchema(BaseModel):
-    """Schema for an Admin to create a new Faculty account."""
-
-    name: str = Field(..., min_length=2, max_length=100, description="Full name of the faculty member")
+    name: str = Field(..., min_length=2, max_length=100, description="Full name of the admin")
     email: EmailStr = Field(..., description="University email address")
     password: str = Field(..., min_length=8, description="Initial password for the account")
     department: Optional[str] = Field(None, description="Department (e.g., Computer Science)")
-    specialization: Optional[str] = Field(None, description="Specialization (e.g., AI, ML, Blockchain)")
 
-class FacultyResponseSchema(BaseModel):
-    """Schema for returning faculty details (excluding password)."""
+class AdminResponseSchema(BaseModel):
+    """Schema for returning admin details (excluding password)."""
     id: UUID
     name: str
     email: str
-    role: FacultyRole
+    role: AdminRole
     department: Optional[str]
-    specialization: Optional[str]
 
     class Config:
         from_attributes = True
@@ -64,38 +56,13 @@ class RegisteredStudentResponseSchema(BaseModel):
     """Student account created through the registration flow."""
     id: UUID
     name: str
-    email: EmailStr
+    # Allow returning emails that may use testing or reserved domains (e.g., test.local)
+    email: str
     enrollment_no: str
     programme: ProgrammeType
     department: str
     batch: str
     is_verified: bool
-
-    class Config:
-        from_attributes = True
-
-class StudentProjectUnderGuideSchema(BaseModel):
-    """Detailed project info for the Guide Profile view."""
-    semester: int
-    academic_year: str
-    team_id: str
-    student_leader: str
-    teammates: List[str]
-    topic_name: str
-    current_phase: str
-    phase_1_submitted: bool
-    phase_2_submitted: bool
-    final_submitted: bool
-
-class GuideProfileResponseSchema(BaseModel):
-    """The full profile of a guide including their projects."""
-    id: UUID
-    name: str
-    email: str
-    department: Optional[str]
-    specialization: Optional[str]
-    is_active: bool = True
-    projects: List[StudentProjectUnderGuideSchema]
 
     class Config:
         from_attributes = True

@@ -32,10 +32,10 @@ class IntegrityFlag(Base, TimestampMixin):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     evidence: Mapped[Optional[str]] = mapped_column(Text) # Quotes, code snippets, or URLs
     
-    # Faculty can resolve flags manually
+    # Admins can resolve flags manually
     resolved_at: Mapped[Optional[DateTime]] = mapped_column(DateTime(timezone=True))
-    resolved_by_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("faculty.id"))
+    resolved_by_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("admins.id"))
     
     # Relationships
-    evaluation = relationship("Evaluation", backref="integrity_flags")
-    resolved_by = relationship("Faculty", backref="resolved_flags")
+    evaluation = relationship("Evaluation", back_populates="integrity_flags")
+    resolved_by = relationship("AdminUser", backref="resolved_flags")

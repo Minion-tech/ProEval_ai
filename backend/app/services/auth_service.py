@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 from fastapi import HTTPException, status
 
-from app.db.Models import StudentAuth, Faculty, ProgrammeType, PreApprovedStudent
+from app.db.Models import StudentAuth, AdminUser, ProgrammeType, PreApprovedStudent
 from app.api.schemas.auth import StudentRegister, OTPVerify
 from app.core.config import settings
 from app.core.security import get_password_hash, verify_password, create_access_token
@@ -34,18 +34,11 @@ class AuthService:
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def get_faculty_by_email(db: AsyncSession, email: str) -> Optional[Faculty]:
-        """Finds a faculty member by their email."""
-        query = select(Faculty).where(Faculty.email == email)
+    async def get_admin_by_email(db: AsyncSession, email: str) -> Optional[AdminUser]:
+        """Finds an administrator by their email."""
+        query = select(AdminUser).where(AdminUser.email == email)
         result = await db.execute(query)
         return result.scalar_one_or_none()
-
-    @staticmethod
-    async def get_all_faculty(db: AsyncSession) -> list[Faculty]:
-        """Returns a list of all faculty members (potential guides)."""
-        query = select(Faculty).order_by(Faculty.name)
-        result = await db.execute(query)
-        return list(result.scalars().all())
 
     @staticmethod
     def _normalize_programme(p: str) -> ProgrammeType:

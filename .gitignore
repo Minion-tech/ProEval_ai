@@ -1,0 +1,19 @@
+# Local Documentation
+docs_local/
+
+# Python Virtual Environment
+.venv/
+__pycache__/
+*.pyc
+
+# Environment Files
+.env
+.env.local
+
+# OS Specific
+.DS_Store
+Thumbs.db
+
+# Project temporary data
+temp_docx_extract/
+project_details/

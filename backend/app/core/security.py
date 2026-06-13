@@ -1,12 +1,9 @@
 import jwt
+import bcrypt
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Union, Any
-from passlib.context import CryptContext
 
 from app.core.config import settings
-
-# 1. Setup Password Hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # 2. JWT Configuration
 ALGORITHM = "HS256"
@@ -36,13 +33,27 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     # Bcrypt has a 72-byte limit. We truncate to 72 bytes safely.
     pwd_bytes = plain_password.encode("utf-8")
     if len(pwd_bytes) > 72:
-        plain_password = pwd_bytes[:72].decode("utf-8", errors="ignore")
-    return pwd_context.verify(plain_password, hashed_password)
+        pwd_bytes = pwd_bytes[:72]
+    
+    try:
+        # hashed_password from DB might be string, bcrypt needs bytes
+        if isinstance(hashed_password, str):
+            hashed_password_bytes = hashed_password.encode("utf-8")
+        else:
+            hashed_password_bytes = hashed_password
+            
+        return bcrypt.checkpw(pwd_bytes, hashed_password_bytes)
+    except Exception:
+        return False
 
 def get_password_hash(password: str) -> str:
     """Scrambles a new password for safe storage. Truncates to 72 bytes for bcrypt."""
     # Bcrypt has a 72-byte limit. We truncate to 72 bytes safely.
     pwd_bytes = password.encode("utf-8")
     if len(pwd_bytes) > 72:
-        password = pwd_bytes[:72].decode("utf-8", errors="ignore")
-    return pwd_context.hash(password)
+        pwd_bytes = pwd_bytes[:72]
+        
+    # Generate salt and hash
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(pwd_bytes, salt)
+    return hashed.decode("utf-8")

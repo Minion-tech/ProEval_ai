@@ -2,14 +2,13 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from app.db.Models.users import Faculty, FacultyRole, PreApprovedStudent, StudentAuth
+from app.db.Models.users import AdminUser, AdminRole, PreApprovedStudent, StudentAuth
 from app.db.Models.projects import ProjectSubmission, AdminStatus, ProjectPhase, TeamMembership
+from app.db.Models.evaluation import Evaluation, EvaluationPhase, MemberEvaluation, VivaQuestion
 from app.api.schemas.admin import (
-    FacultyCreateSchema, 
-    AdminReplaceGuideSchema, 
+    AdminCreateSchema, 
     AdminProjectActionSchema, 
-    BulkStudentUploadSchema,
-    GuideProfileResponseSchema
+    BulkStudentUploadSchema
 )
 from app.core.security import get_password_hash
 from fastapi import HTTPException, status
@@ -18,66 +17,43 @@ from uuid import UUID
 
 class AdminService:
     @staticmethod
-    async def create_faculty(db: AsyncSession, faculty_data: FacultyCreateSchema) -> Faculty:
-        """Create a new Faculty account. Only for Admins to use."""
+    async def create_admin(db: AsyncSession, admin_data: AdminCreateSchema) -> AdminUser:
+        """Create a new Admin account."""
         
         # 1. Check if email already exists
-        result = await db.execute(select(Faculty).where(Faculty.email == faculty_data.email))
-        existing_faculty = result.scalar_one_or_none()
+        result = await db.execute(select(AdminUser).where(AdminUser.email == admin_data.email))
+        existing_admin = result.scalar_one_or_none()
         
-        if existing_faculty:
+        if existing_admin:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="A faculty member with this email already exists."
+                detail="An admin with this email already exists."
             )
         
         # 2. Hash the password for security
-        hashed_password = get_password_hash(faculty_data.password)
+        hashed_password = get_password_hash(admin_data.password)
         
-        # 3. Create the new Faculty record (always as FACULTY role)
-        new_faculty = Faculty(
-            name=faculty_data.name,
-            email=faculty_data.email,
+        # 3. Create the new Admin record
+        new_admin = AdminUser(
+            name=admin_data.name,
+            email=admin_data.email,
             password_hash=hashed_password,
-            department=faculty_data.department,
-            specialization=faculty_data.specialization,
-            role=FacultyRole.FACULTY
+            department=admin_data.department,
+            role=AdminRole.ADMIN
         )
         
         # 4. Save to the database
-        db.add(new_faculty)
+        db.add(new_admin)
         await db.commit()
-        await db.refresh(new_faculty)
+        await db.refresh(new_admin)
         
-        return new_faculty
+        return new_admin
 
     @staticmethod
-    async def get_all_faculty(db: AsyncSession) -> List[Faculty]:
-        """Get a list of all faculty members (excluding admins)."""
-        result = await db.execute(
-            select(Faculty).where(Faculty.role == FacultyRole.FACULTY)
-        )
+    async def get_all_admins(db: AsyncSession) -> List[AdminUser]:
+        """Get a list of all administrators."""
+        result = await db.execute(select(AdminUser))
         return list(result.scalars().all())
-
-    @staticmethod
-    async def reassign_guide(db: AsyncSession, project_id: UUID, payload: AdminReplaceGuideSchema) -> ProjectSubmission:
-        """Forcibly reassign a new guide to a project."""
-        # 1. Find the project
-        project = await db.get(ProjectSubmission, project_id)
-        if not project:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
-        
-        # 2. Find the new guide
-        guide = await db.get(Faculty, payload.new_guide_id)
-        if not guide or guide.role != FacultyRole.FACULTY:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="New guide not found or invalid role")
-        
-        # 3. Update the project
-        project.guide_id = payload.new_guide_id
-        
-        await db.commit()
-        await db.refresh(project)
-        return project
 
     @staticmethod
     async def update_project_status(db: AsyncSession, project_id: UUID, payload: AdminProjectActionSchema) -> ProjectSubmission:
@@ -103,6 +79,106 @@ class AdminService:
         return list(result.scalars().all())
 
     @staticmethod
+    def _evaluation_payload(evaluation: Evaluation, project: ProjectSubmission | None = None) -> dict:
+        submission = project or evaluation.submission
+        phase_1_data = submission.phase_1_data if submission else {}
+        leader_name = submission.leader.name if submission and submission.leader else "Unknown"
+
+        return {
+            "id": evaluation.id,
+            "submission_id": evaluation.submission_id,
+            "project_id": evaluation.submission_id,
+            "project_title": (phase_1_data or {}).get("title", "Untitled"),
+            "team_id": submission.team_id if submission else None,
+            "team_leader_name": leader_name,
+            "semester": submission.semester if submission else None,
+            "academic_year": submission.academic_year if submission else None,
+            "phase": evaluation.phase,
+            "status": evaluation.status,
+            "total_score": evaluation.total_score,
+            "grade": evaluation.grade,
+            "ai_narrative": evaluation.ai_narrative,
+            "agent_logs": evaluation.agent_logs,
+            "roadmap_json": getattr(evaluation, "roadmap_json", None),
+            "created_at": evaluation.created_at,
+            "updated_at": evaluation.updated_at,
+        }
+
+    @staticmethod
+    async def get_all_evaluations(db: AsyncSession) -> list[dict]:
+        """Get institution-wide evaluation records with project context."""
+        from app.db.Models import EvaluationStatus
+        result = await db.execute(
+            select(Evaluation)
+            .join(ProjectSubmission, Evaluation.submission_id == ProjectSubmission.id)
+            .options(
+                joinedload(Evaluation.submission).joinedload(ProjectSubmission.leader)
+            )
+            .where(
+                ProjectSubmission.is_deleted == False,
+                Evaluation.status == EvaluationStatus.COMPLETED
+            )
+            .order_by(Evaluation.created_at.desc())
+        )
+        return [AdminService._evaluation_payload(evaluation) for evaluation in result.scalars().all()]
+
+    @staticmethod
+    async def get_project_evaluations(db: AsyncSession, project_id: UUID) -> list[dict]:
+        """Get all evaluation records for one project submission."""
+        project_result = await db.execute(
+            select(ProjectSubmission)
+            .options(joinedload(ProjectSubmission.leader))
+            .where(ProjectSubmission.id == project_id, ProjectSubmission.is_deleted == False)
+        )
+        project = project_result.scalar_one_or_none()
+        
+        if not project:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+
+        result = await db.execute(
+            select(Evaluation)
+            .where(Evaluation.submission_id == project_id)
+            .order_by(Evaluation.created_at.desc())
+        )
+        return [AdminService._evaluation_payload(evaluation, project) for evaluation in result.scalars().all()]
+
+    @staticmethod
+    async def get_evaluation_detail(db: AsyncSession, submission_id: UUID, phase: EvaluationPhase) -> dict:
+        """Get the latest complete evaluation for a submission and phase."""
+        project_result = await db.execute(
+            select(ProjectSubmission)
+            .options(joinedload(ProjectSubmission.leader))
+            .where(ProjectSubmission.id == submission_id, ProjectSubmission.is_deleted == False)
+        )
+        project = project_result.scalar_one_or_none()
+        
+        if not project:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+
+        result = await db.execute(
+            select(Evaluation)
+            .where(Evaluation.submission_id == submission_id, Evaluation.phase == phase)
+            .order_by(Evaluation.created_at.desc())
+        )
+        evaluation = result.scalars().first()
+        if not evaluation:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evaluation not found")
+
+        return AdminService._evaluation_payload(evaluation, project)
+
+    @staticmethod
+    async def delete_evaluation(db: AsyncSession, evaluation_id: UUID) -> dict:
+        """Delete an evaluation record."""
+        evaluation = await db.get(Evaluation, evaluation_id)
+        if not evaluation:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evaluation not found")
+        
+        # Delete the evaluation
+        await db.delete(evaluation)
+        await db.commit()
+        return {"message": "Evaluation successfully deleted."}
+
+    @staticmethod
     async def delete_project(db: AsyncSession, project_id: UUID) -> dict:
         """
         Soft-delete a project submission.
@@ -116,11 +192,6 @@ class AdminService:
         # 1. Mark as deleted
         project.is_deleted = True
         project.deleted_by_admin = True
-        
-        # 2. We don't necessarily need to delete TeamMembership if we filter them out in get_my_project,
-        # but to be safe and "reset" the student dashboard, we can either delete them or 
-        # ensure get_my_project ignores memberships of deleted projects.
-        # Let's keep memberships but ensure they don't count as "active".
         
         await db.commit()
         return {"message": "Project successfully deleted by admin. Student dashboard reset."}
@@ -163,100 +234,83 @@ class AdminService:
         return list(result.scalars().all())
 
     @staticmethod
-    async def get_guide_load(db: AsyncSession) -> List[dict]:
-        """Calculates current project count for every faculty member (Decision Support)."""
-        # 1. Fetch all faculty members (who are not admins)
-        faculty_query = select(Faculty).where(Faculty.role == FacultyRole.FACULTY)
-        faculty_result = await db.execute(faculty_query)
-        faculty_members = faculty_result.scalars().all()
-
-        load_data = []
-        for f in faculty_members:
-            # 2. Count active projects for this specific faculty member
-            # An active project is one where they are the guide
-            project_count_query = select(func.count(ProjectSubmission.id)).where(
-                ProjectSubmission.guide_id == f.id
-            )
-            count_result = await db.execute(project_count_query)
-            count = count_result.scalar()
-
-            # 3. Bundle it up into a nice report
-            load_data.append({
-                "faculty_id": str(f.id),
-                "name": f.name,
-                "email": f.email,
-                "specialization": f.specialization,
-                "current_load": count,
-                "max_load": 5 
-            })
+    async def delete_preapproved_student(db: AsyncSession, student_id: UUID) -> dict:
+        """Delete a pre-approved student record."""
+        student = await db.get(PreApprovedStudent, student_id)
+        if not student:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pre-approved student not found")
         
-        return load_data
+        await db.delete(student)
+        await db.commit()
+        return {"message": "Pre-approved student record removed."}
 
     @staticmethod
     async def get_overview(db: AsyncSession) -> dict:
         """Calculates high-level stats for the Admin Dashboard."""
         # 1. Count registered students
-        student_count = await db.execute(select(func.count(StudentAuth.id)))
-        # 2. Count faculty members
-        faculty_count = await db.execute(select(func.count(Faculty.id)).where(Faculty.role == FacultyRole.FACULTY))
-        # 3. Count total project submissions
-        project_count = await db.execute(select(func.count(ProjectSubmission.id)))
+        student_count_res = await db.execute(select(func.count(StudentAuth.id)))
+        # 2. Count admin users
+        admin_count_res = await db.execute(select(func.count(AdminUser.id)))
+        # 3. Count only active project submissions
+        project_count_res = await db.execute(
+            select(func.count(ProjectSubmission.id)).where(ProjectSubmission.is_deleted == False)
+        )
         
         return {
-            "total_students": student_count.scalar() or 0,
-            "total_faculty": faculty_count.scalar() or 0,
-            "active_projects": project_count.scalar() or 0,
+            "total_students": student_count_res.scalar() or 0,
+            "total_admins": admin_count_res.scalar() or 0,
+            "active_projects": project_count_res.scalar() or 0,
             "unresolved_flags": 0 
         }
 
     @staticmethod
-    async def get_guide_profile(db: AsyncSession, guide_id: UUID) -> dict:
-        """Fetch a full report on a guide and their assigned student teams."""
-        # 1. Fetch the guide
-        guide = await db.get(Faculty, guide_id)
-        if not guide:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guide not found")
+    async def delete_student(db: AsyncSession, student_id: UUID) -> dict:
+        """Delete a student and remove all related data: team memberships, member evaluations,
+        viva questions, evaluations for projects they lead, and their project submissions.
+        This is a hard delete intended for admin use only.
+        """
+        student = await db.get(StudentAuth, student_id)
+        if not student:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
 
-        # 2. Fetch all projects for this guide with their members and student details
-        query = select(ProjectSubmission).where(
-            ProjectSubmission.guide_id == guide_id
-        ).options(
-            joinedload(ProjectSubmission.members).joinedload(TeamMembership.student)
-        )
-        result = await db.execute(query)
-        projects = result.unique().scalars().all()
+        # 1. Remove member evaluations linked to this student's memberships
+        mem_query = select(TeamMembership).where(TeamMembership.student_id == student_id)
+        mem_res = await db.execute(mem_query)
+        memberships = mem_res.scalars().all()
 
-        # 3. Format the project data for the frontend
-        formatted_projects = []
-        for p in projects:
-            leader_name = "Unknown"
-            teammates = []
-            
-            for m in p.members:
-                if m.student_id == p.leader_id:
-                    leader_name = m.student.name
-                else:
-                    teammates.append(m.student.name)
+        for membership in memberships:
+            # delete MemberEvaluation instances tied to this membership (and their viva questions via cascade)
+            me_query = select(MemberEvaluation).where(MemberEvaluation.membership_id == membership.id)
+            me_res = await db.execute(me_query)
+            member_evals = me_res.scalars().all()
+            for me in member_evals:
+                # VivaQuestion relationship is configured with cascade on MemberEvaluation, but remove explicitly
+                vq_query = select(VivaQuestion).where(VivaQuestion.member_evaluation_id == me.id)
+                vq_res = await db.execute(vq_query)
+                for vq in vq_res.scalars().all():
+                    await db.delete(vq)
+                await db.delete(me)
 
-            formatted_projects.append({
-                "semester": p.semester,
-                "academic_year": p.academic_year,
-                "team_id": p.team_id,
-                "student_leader": leader_name,
-                "teammates": teammates,
-                "topic_name": p.phase_1_data.get("title", "Untitled") if p.phase_1_data else "Untitled",
-                "current_phase": p.current_phase.value,
-                "phase_1_submitted": p.phase_1_data is not None,
-                "phase_2_submitted": p.phase_2_data is not None,
-                "final_submitted": p.final_data is not None
-            })
+            # delete the membership itself
+            await db.delete(membership)
 
-        return {
-            "id": guide.id,
-            "name": guide.name,
-            "email": guide.email,
-            "department": guide.department,
-            "specialization": guide.specialization,
-            "is_active": True,
-            "projects": formatted_projects
-        }
+        # 2. Remove projects where the student is the leader (and their evaluations)
+        proj_query = select(ProjectSubmission).where(ProjectSubmission.leader_id == student_id)
+        proj_res = await db.execute(proj_query)
+        projects = proj_res.scalars().all()
+
+        for project in projects:
+            # delete evaluations for the project (these cascade to their child rows)
+            eval_query = select(Evaluation).where(Evaluation.submission_id == project.id)
+            eval_res = await db.execute(eval_query)
+            for ev in eval_res.scalars().all():
+                await db.delete(ev)
+
+            # delete the project (this will remove members via cascade)
+            await db.delete(project)
+
+        # 3. Finally delete the student account
+        await db.delete(student)
+        await db.commit()
+
+        return {"message": "Student and all related data removed."}

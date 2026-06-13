@@ -20,8 +20,8 @@ from app.db.Models import (
     Evaluation,
     EvaluationPhase,
     EvaluationStatus,
-    Faculty,
-    GuideStatus,
+    AdminUser,
+    AdminRole,
     ProgrammeType,
     ProjectSubmission,
     ProjectPhase,
@@ -37,24 +37,25 @@ AsyncSessionLocal = async_sessionmaker(
 )
 
 
-async def get_or_create_faculty(db: AsyncSession) -> Faculty:
-    query = select(Faculty).where(Faculty.email == "phase2_guide@university.edu")
+async def get_or_create_admin(db: AsyncSession) -> AdminUser:
+    query = select(AdminUser).where(AdminUser.email == "admin@university.edu")
     result = await db.execute(query)
-    faculty = result.scalar_one_or_none()
+    admin = result.scalar_one_or_none()
 
-    if faculty:
-        return faculty
+    if admin:
+        return admin
 
-    faculty = Faculty(
-        name="Dr. Phase Two Guide",
-        email="phase2_guide@university.edu",
+    admin = AdminUser(
+        name="System Admin",
+        email="admin@university.edu",
         password_hash="fake_hash",
-        department="Computer Science",
+        department="IT Services",
+        role=AdminRole.ADMIN
     )
-    db.add(faculty)
+    db.add(admin)
     await db.commit()
-    await db.refresh(faculty)
-    return faculty
+    await db.refresh(admin)
+    return admin
 
 
 async def get_or_create_student(db: AsyncSession) -> StudentAuth:
@@ -84,13 +85,13 @@ async def get_or_create_student(db: AsyncSession) -> StudentAuth:
 async def get_or_create_phase1_project(
     db: AsyncSession,
     student: StudentAuth,
-    faculty: Faculty,
 ) -> ProjectSubmission:
     query = select(ProjectSubmission).where(
         and_(
             ProjectSubmission.leader_id == student.id,
             ProjectSubmission.academic_year == "2025-26",
             ProjectSubmission.semester == 6,
+            ProjectSubmission.is_deleted == False
         )
     )
     result = await db.execute(query)
@@ -100,7 +101,6 @@ async def get_or_create_phase1_project(
         return project
 
     payload = ProjectSubmissionCreateSchema(
-        guide_id=faculty.id,
         academic_year="2025-26",
         semester=6,
         phase_1_data=Phase1DataSchema(
@@ -117,6 +117,7 @@ async def get_or_create_phase1_project(
                 "Reduce idle systems",
             ],
             tech_stack=["Python", "FastAPI", "PostgreSQL"],
+            use_case_diagram="data:image/png;base64,fake-image-data"
         ),
     )
 
@@ -130,7 +131,6 @@ async def get_or_create_phase1_project(
 async def ensure_phase_1_completed(
     db: AsyncSession,
     project: ProjectSubmission,
-    faculty: Faculty,
 ) -> None:
     query = select(Evaluation).where(
         and_(
@@ -147,13 +147,11 @@ async def ensure_phase_1_completed(
         return
 
     print("INFO: Seeding a completed Phase 1 evaluation so Phase 2 can be tested.")
-    project.guide_status = GuideStatus.ACCEPTED
     project.current_phase = ProjectPhase.PHASE_2
 
     if not phase_1_eval:
         phase_1_eval = Evaluation(
             submission_id=project.id,
-            faculty_id=faculty.id,
             phase=EvaluationPhase.PHASE_1,
             status=EvaluationStatus.COMPLETED,
             total_score=8.0,
@@ -213,39 +211,37 @@ async def run_phase_2_manual_test() -> None:
     async with AsyncSessionLocal() as db:
         print("--- [PHASE 2 MANUAL TEST START] ---")
 
-        faculty = await get_or_create_faculty(db)
+        admin = await get_or_create_admin(db)
         student = await get_or_create_student(db)
-        project = await get_or_create_phase1_project(db, student, faculty)
+        project = await get_or_create_phase1_project(db, student)
 
         print(f"Student ID: {student.id}")
-        print(f"Guide ID: {faculty.id}")
         print(f"Submission ID: {project.id}")
         print(f"Team ID: {project.team_id}")
 
-        await ensure_phase_1_completed(db, project, faculty)
+        await ensure_phase_1_completed(db, project)
 
         print("\n--- [STEP 1: Submit Phase 2 Data] ---")
         phase_2_payload = Phase2SubmissionSchema(
             phase_2_data=Phase2DataSchema(
                 github_url="https://github.com/example/proeval-phase2",
-                architecture_diagram_url="https://example.com/architecture-phase2.png",
+                presentation_url="https://example.com/proeval-phase2-midterm.pdf",
                 progress_notes=(
                     "We completed the authentication module, protected route access, "
-                    "project submission APIs, guide approval flow, and the initial "
+                    "project submission APIs, and the initial "
                     "evaluation pipeline. We also integrated JWT-based identity "
-                    "resolution and role-aware authorization for students and faculty."
+                    "resolution and role-aware authorization for students and admins."
                 ),
                 completed_milestones=[
                     "Student registration and login",
                     "Protected project submission route",
-                    "Guide approval for Phase 1",
+                    "Autonomous Phase 1 evaluation",
                     "JWT-based current-user dependency",
                 ],
                 pending_risks=[
                     "Redis is still mocked for OTP storage",
                     "Background evaluation jobs should move to Celery",
                 ],
-                documentation_url="https://example.com/proeval-docs",
             )
         )
 
@@ -256,19 +252,8 @@ async def run_phase_2_manual_test() -> None:
             data=phase_2_payload,
         )
         print(f"SUCCESS: Phase 2 submitted. Current phase = {updated_project.current_phase}")
-        print(f"Guide status after submission = {updated_project.guide_status}")
 
-        print("\n--- [STEP 2: Guide Reviews Phase 2] ---")
-        reviewed_project = await ProjectService.review_phase_2(
-            db=db,
-            submission_id=project.id,
-            guide_id=faculty.id,
-            status=GuideStatus.ACCEPTED,
-            feedback="Good progress. Strengthen delivery planning before final submission.",
-        )
-        print(f"SUCCESS: Guide review saved. Guide status = {reviewed_project.guide_status}")
-
-        print("\n--- [STEP 3: Wait for AI Evaluation] ---")
+        print("\n--- [STEP 2: Wait for AI Evaluation] ---")
         await wait_for_phase_2_result(AsyncSessionLocal, project.id)
 
     await engine.dispose()

@@ -1,0 +1,63 @@
+name: ProEval AI CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend-checks:
+    name: Backend CI (Python)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+        
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Lint with Flake8 (Optional)
+      run: |
+        pip install flake8
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+  frontend-checks:
+    name: Frontend CI (Next.js)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ProEval_Frontend
+        
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: './ProEval_Frontend/package-lock.json'
+        
+    - name: Install Dependencies
+      run: npm install
+      
+    - name: Build Check
+      run: npm run build
+      env:
+        # Disable linting during build to speed up, or enable it if you want strictness
+        NEXT_TELEMETRY_DISABLED: 1
+        # Mock environment variables needed for build
+        NEXT_PUBLIC_API_URL: "https://mock.api"
+        NEXT_PUBLIC_ELEVENLABS_AGENT_ID: "mock-id"

@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from sqlalchemy import select, and_
 
 from app.core.config import settings
-from app.db.Models import Base, Faculty, StudentAuth, ProjectSubmission, Evaluation, GuideStatus, ProjectPhase, EvaluationStatus, EvaluationPhase, ProgrammeType
+from app.db.Models import Base, AdminUser, StudentAuth, ProjectSubmission, Evaluation, ProjectPhase, EvaluationStatus, EvaluationPhase, ProgrammeType
 from app.services.project_service import ProjectService
 from app.api.schemas.projects import ProjectSubmissionCreateSchema, Phase1DataSchema
 
@@ -16,24 +16,24 @@ async def run_phase1_test():
     async with AsyncSessionLocal() as db:
         print("--- [PHASE 1 INTEGRATION TEST START] ---")
 
-        # STEP 1: Ensure we have a Faculty Member (The Guide)
-        query_faculty = select(Faculty).where(Faculty.email == "mentor@university.edu")
-        result = await db.execute(query_faculty)
-        guide = result.scalar_one_or_none()
+        # STEP 1: Ensure we have an Admin Member
+        query_admin = select(AdminUser).where(AdminUser.email == "admin@university.edu")
+        result = await db.execute(query_admin)
+        admin = result.scalar_one_or_none()
         
-        if not guide:
-            print("Creating dummy Faculty member...")
-            guide = Faculty(
-                name="Dr. AI Mentor",
-                email="mentor@university.edu",
+        if not admin:
+            print("Creating dummy Admin member...")
+            admin = AdminUser(
+                name="System Admin",
+                email="admin@university.edu",
                 password_hash="fake_hash",
-                department="Computer Science"
+                department="IT Services"
             )
-            db.add(guide)
+            db.add(admin)
             await db.commit()
-            await db.refresh(guide)
+            await db.refresh(admin)
         
-        print(f"Using Guide: {guide.name} (ID: {guide.id})")
+        print(f"Using Admin: {admin.name} (ID: {admin.id})")
 
         # STEP 2: Ensure we have a Student Leader
         query_student = select(StudentAuth).limit(1)
@@ -67,7 +67,8 @@ async def run_phase1_test():
             and_(
                 ProjectSubmission.leader_id == student.id,
                 ProjectSubmission.academic_year == "2025-26",
-                ProjectSubmission.semester == 6
+                ProjectSubmission.semester == 6,
+                ProjectSubmission.is_deleted == False
             )
         )
         existing_result = await db.execute(query_existing)
@@ -75,7 +76,6 @@ async def run_phase1_test():
 
         if not project:
             proposal_data = ProjectSubmissionCreateSchema(
-                guide_id=guide.id,
                 academic_year="2025-26",
                 semester=6,
                 phase_1_data=Phase1DataSchema(
@@ -83,35 +83,21 @@ async def run_phase1_test():
                     abstract="A project that uses computer vision to optimize parking and traffic flow within the university campus using existing CCTV infrastructure. It involves real-time detection and occupancy mapping.",
                     domain="Artificial Intelligence",
                     objectives=["Reduce wait times by 20%", "Automate parking billing", "Real-time occupancy detection"],
-                    tech_stack=["Python", "PyTorch", "FastAPI", "PostgreSQL"]
+                    tech_stack=["Python", "PyTorch", "FastAPI", "PostgreSQL"],
+                    use_case_diagram="data:image/png;base64,fake-image-data"
                 )
             )
             project = await ProjectService.create_submission(db, student.id, proposal_data)
             print(f"SUCCESS: Project created with Team ID: {project.team_id}")
         else:
             print(f"INFO: Using existing project for this student (Team ID: {project.team_id})")
-            # Reset status to PENDING for the test
-            project.guide_status = GuideStatus.PENDING
-            await db.commit()
 
-        # STEP 4: Faculty Approves the Project
-        print("\n--- [ACTION: Faculty Approving Project] ---")
-        approved_project = await ProjectService.approve_submission(
-            db=db,
-            submission_id=project.id,
-            guide_id=guide.id,
-            status=GuideStatus.ACCEPTED,
-            feedback="Excellent topic. Ensure you have access to campus CCTV feeds."
-        )
-        print(f"SUCCESS: Project status updated to: {approved_project.guide_status}")
-
-        # STEP 5: Wait and Check for AI Evaluation
-        print("\n--- [WAITING: AI Agent (Claude) is analyzing...] ---")
-        print("Sleeping for 20 seconds to allow background task to finish...")
-        await asyncio.sleep(20)
+        # STEP 4: Wait and Check for AI Evaluation (Auto-triggered upon submission)
+        print("\n--- [WAITING: AI Agents are analyzing...] ---")
+        print("Sleeping for 30 seconds to allow autonomous agents to finish...")
+        await asyncio.sleep(30)
 
         # Re-fetch evaluation results using a fresh session to ensure we get DB changes
-        # (Though we're in the same loop, background task is in a different session)
         query_eval = select(Evaluation).where(
             and_(
                 Evaluation.submission_id == project.id,
@@ -126,10 +112,11 @@ async def run_phase1_test():
             print(f"Current Evaluation Status: {evaluation.status}")
             if evaluation.status == EvaluationStatus.COMPLETED:
                 print("\n--- [FINAL RESULT: AI EVALUATION SUCCESS] ---")
-                print(f"Score: {evaluation.total_score}/10")
                 print(f"AI Narrative Feedback:\n{evaluation.ai_narrative[:500]}...") 
             elif evaluation.status == EvaluationStatus.FAILED:
                 print(f"\nFAILURE: AI Evaluation failed: {evaluation.ai_narrative}")
+            elif evaluation.status == EvaluationStatus.AWAITING_CLARIFICATION:
+                print(f"\nSTATUS: Awaiting clarification answers from student.")
             else:
                 print(f"\nSTILL IN PROGRESS: Check again in a few seconds.")
         else:

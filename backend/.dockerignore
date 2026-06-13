@@ -1,0 +1,14 @@
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.env
+backend.out.log
+backend.err.log
+uvicorn_out.txt
+*.log
+alembic/versions/__pycache__

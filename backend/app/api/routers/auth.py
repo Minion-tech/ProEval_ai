@@ -13,7 +13,8 @@ from app.api.schemas.auth import (
 )
 from app.services.auth_service import AuthService
 from app.core.security import create_access_token, verify_password
-from app.db.Models import Faculty, StudentAuth
+from app.core.config import settings
+from app.db.Models import AdminUser, StudentAuth
 
 router = APIRouter(
     prefix="/auth",
@@ -55,16 +56,48 @@ async def login_for_access_token(
     db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
-    Unified login: Handles both Students and Faculty.
+    Unified login: Handles both Students and Admins.
     """
+    # Dev Mode Bypass: Automatically create/login test user
+    if settings.ENABLE_TEST_MODE:
+        if data.email == settings.TEST_USER_EMAIL:
+            user = await AuthService.get_student_by_email_or_enrollment(db, data.email, "")
+            from app.core.security import get_password_hash
+            from app.db.Models import ProgrammeType
+            
+            if not user:
+                # Create a mock student if they don't exist
+                user = StudentAuth(
+                    name="Test Student",
+                    email=settings.TEST_USER_EMAIL,
+                    enrollment_no="TEST-0000",
+                    password_hash=get_password_hash(data.password),
+                    programme=ProgrammeType.BTECH,
+                    department="Computer Science",
+                    batch="2022-2026",
+                    is_verified=True
+                )
+                db.add(user)
+                await db.commit()
+                await db.refresh(user)
+            
+            # In test mode, we allow the login if it's the test email
+            access_token = create_access_token(subject=user.id)
+            return {"access_token": access_token, "token_type": "bearer"}
+        
+        if data.email == "admin@proeval.ai":
+            # Return a token for the transient Dev Admin
+            access_token = create_access_token(subject="00000000-0000-0000-0000-000000000000")
+            return {"access_token": access_token, "token_type": "bearer"}
+
     user = None
 
     # 1. Search the StudentAuth table first (majority of users)
     user = await AuthService.get_student_by_email_or_enrollment(db, data.email, "")
     
-    # 2. If not a student, search the Faculty table
+    # 2. If not a student, search the AdminUser table
     if not user:
-        user = await AuthService.get_faculty_by_email(db, data.email)
+        user = await AuthService.get_admin_by_email(db, data.email)
 
     # 3. Security Check: If user still doesn't exist, throw 401
     if not user:
@@ -87,7 +120,7 @@ async def login_for_access_token(
 
 @router.get("/me", response_model=CurrentUserResponse)
 async def read_current_user(
-    current_user: StudentAuth | Faculty = Depends(get_current_user),
+    current_user: StudentAuth | AdminUser = Depends(get_current_user),
 ) -> CurrentUserResponse:
     """
     Return the currently authenticated user profile for frontend session restore.
@@ -112,23 +145,3 @@ async def read_current_user(
         role=current_user.role.value,
         department=current_user.department,
     )
-
-@router.get("/faculty", response_model=list[CurrentUserResponse])
-async def list_faculty(
-    db: AsyncSession = Depends(get_db),
-    # Optional: current_user: StudentAuth | Faculty = Depends(get_current_user),
-) -> Any:
-    """
-    Returns a list of all faculty members. Used by students to pick a guide.
-    """
-    faculty_list = await AuthService.get_all_faculty(db)
-    return [
-        CurrentUserResponse(
-            id=f.id,
-            name=f.name,
-            email=f.email,
-            role=f.role.value,
-            department=f.department,
-        )
-        for f in faculty_list
-    ]
