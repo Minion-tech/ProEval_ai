@@ -5,23 +5,22 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.Models.base import Base, TimestampMixin
 
 # 1. Define an Enum for user roles
-class FacultyRole(str, enum.Enum):
+class AdminRole(str, enum.Enum):
     ADMIN = "ADMIN"
-    FACULTY = "FACULTY"
 
-class Faculty(Base, TimestampMixin):
-    """Model representing University Faculty and Admins."""
+class AdminUser(Base, TimestampMixin):
+    """Model representing System Administrators."""
+    __tablename__ = "admins"
     
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[FacultyRole] = mapped_column(
-        Enum(FacultyRole), 
-        default=FacultyRole.FACULTY,
+    role: Mapped[AdminRole] = mapped_column(
+        Enum(AdminRole), 
+        default=AdminRole.ADMIN,
         nullable=False
     )
     department: Mapped[Optional[str]] = mapped_column(String(255))
-    specialization: Mapped[Optional[str]] = mapped_column(String(255))
 
 class ProgrammeType(str, enum.Enum):
     BTECH = "BTECH"

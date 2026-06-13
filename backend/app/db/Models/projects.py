@@ -12,11 +12,6 @@ class ProjectPhase(str, enum.Enum):
     FINAL = "FINAL"
     SUBMITTED = "SUBMITTED"
 
-class GuideStatus(str, enum.Enum):
-    PENDING = "PENDING"
-    ACCEPTED = "ACCEPTED"
-    REJECTED = "REJECTED"
-
 class AdminStatus(str, enum.Enum):
     PENDING = "PENDING"
     APPROVED = "APPROVED"
@@ -33,12 +28,11 @@ class ProjectSubmission(Base, TimestampMixin):
     
     # Relationships to Users
     leader_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("studentauth.id"), nullable=False)
-    guide_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("faculty.id"))
     
     # Phase Data (Flexible JSON storage)
     phase_1_data: Mapped[Optional[dict]] = mapped_column(JSONB) # {title, abstract, domain, goals}
-    phase_2_data: Mapped[Optional[dict]] = mapped_column(JSONB) # {github_url, mid_term_notes}
-    final_data: Mapped[Optional[dict]] = mapped_column(JSONB) # {final_report_url, demo_url}
+    phase_2_data: Mapped[Optional[dict]] = mapped_column(JSONB) # {github_url, presentation_url, progress_notes}
+    final_data: Mapped[Optional[dict]] = mapped_column(JSONB) # {final_report_url, presentation_url, github_url, demo_video_url}
     
     current_phase: Mapped[ProjectPhase] = mapped_column(
         Enum(ProjectPhase),
@@ -46,12 +40,6 @@ class ProjectSubmission(Base, TimestampMixin):
         nullable=False
     )
     
-    guide_status: Mapped[GuideStatus] = mapped_column(
-        Enum(GuideStatus),
-        default=GuideStatus.PENDING,
-        nullable=False
-    )
-
     admin_status: Mapped[AdminStatus] = mapped_column(
         Enum(AdminStatus),
         default=AdminStatus.PENDING,
@@ -72,7 +60,6 @@ class ProjectSubmission(Base, TimestampMixin):
     
     # SQLAlchemy Relationships
     leader = relationship("StudentAuth", backref="led_submissions")
-    guide = relationship("Faculty", backref="guided_submissions")
     members = relationship("TeamMembership", back_populates="submission", cascade="all, delete-orphan")
     evaluations = relationship("Evaluation", back_populates="submission")
 
@@ -84,14 +71,15 @@ class TeamMembership(Base, TimestampMixin):
     submission_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("project_submissions.id"), nullable=False)
     student_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("studentauth.id"), nullable=False)
     
-    role: Mapped[str] = mapped_column(String(100), nullable=False) # e.g., "Developer", "Designer"
+    role: Mapped[str] = mapped_column(Text, nullable=False) # e.g., "Developer", "Designer" or "Frontend Developer / UX Lead"
     functions: Mapped[str] = mapped_column(Text, nullable=False) # Detailed description of duties
-    modules: Mapped[str] = mapped_column(Text, nullable=False) # List of codebase components worked on
+    modules: Mapped[str] = mapped_column(Text, nullable=True) # List of codebase components worked on
     
     # New fields for AI decision support (Architecture v3.0)
     work_description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     tech_stack: Mapped[Optional[str]] = mapped_column(Text, nullable=True) 
     ai_feedback: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True) # {skill_gap_alerts: List[str], workload_balance: float}
+    has_viewed_feedback: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
 
     # SQLAlchemy Relationships
     submission = relationship("ProjectSubmission", back_populates="members")

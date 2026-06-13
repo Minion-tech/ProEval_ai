@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 from app.core.config import settings
-from app.api.routers import projects, auth, admin, faculty
+from app.api.routers import projects, auth, admin, test_projects, interview, integrations
 
 # 1. Initialize the FastAPI app
 app = FastAPI(
@@ -31,7 +31,11 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 # This allows your frontend (e.g., localhost:3000) to make requests to your backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[str(origin).rstrip("/") for origin in settings.BACKEND_CORS_ORIGINS],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        * [str(origin).rstrip("/") for origin in settings.BACKEND_CORS_ORIGINS]
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -40,9 +44,11 @@ app.add_middleware(
 # 3. Include Routers
 # We mount the routers under the /api/v1 prefix
 app.include_router(projects.router, prefix=settings.API_V1_STR)
+app.include_router(interview.router, prefix=settings.API_V1_STR)
+app.include_router(integrations.router, prefix=settings.API_V1_STR)
+app.include_router(test_projects.router, prefix=settings.API_V1_STR)
 app.include_router(auth.router, prefix=settings.API_V1_STR)
 app.include_router(admin.router, prefix=f"{settings.API_V1_STR}/admin", tags=["admin"])
-app.include_router(faculty.router, prefix=f"{settings.API_V1_STR}/faculty", tags=["faculty"])
 
 # 4. Root endpoint for sanity check
 @app.get("/", tags=["Health"])

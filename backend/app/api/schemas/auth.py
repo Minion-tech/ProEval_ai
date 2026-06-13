@@ -19,7 +19,7 @@ class OTPVerify(BaseModel):
     otp: str = Field(..., min_length=6, max_length=6)
 
 class LoginRequest(BaseModel):
-    """Schema for the shared student/faculty login request."""
+    """Schema for the shared student/admin login request."""
     email: EmailStr
     password: str = Field(..., min_length=8)
 

@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from sqlalchemy import select, and_
 
 from app.core.config import settings
-from app.db.Models import Base, Faculty, StudentAuth, ProjectSubmission, Evaluation, GuideStatus, ProjectPhase, EvaluationStatus, EvaluationPhase, ProgrammeType
+from app.db.Models import Base, AdminUser, StudentAuth, ProjectSubmission, Evaluation, ProjectPhase, EvaluationStatus, EvaluationPhase, ProgrammeType
 from app.services.project_service import ProjectService
 from app.api.schemas.projects import ProjectSubmissionCreateSchema, Phase1DataSchema
 
@@ -16,56 +16,53 @@ async def run_full_phase1_test():
     async with AsyncSessionLocal() as db:
         print("--- [FULL PHASE 1 INTEGRATION TEST START] ---")
 
-        # 1. Setup Faculty & Student
-        query_faculty = select(Faculty).where(Faculty.email == "mentor@university.edu")
-        result = await db.execute(query_faculty)
-        guide = result.scalar_one_or_none()
-        if not guide:
-            guide = Faculty(name="Dr. AI Mentor", email="mentor@university.edu", password_hash="fake", department="CS")
-            db.add(guide)
-            await db.commit()
-            await db.refresh(guide)
-
+        # 1. Setup Student
         query_student = select(StudentAuth).limit(1)
         result_st = await db.execute(query_student)
         student = result_st.scalar_one_or_none()
         if not student:
-            student = StudentAuth(name="Test Student", email="test@uni.edu", enrollment_no="T-001", password_hash="fake", programme=ProgrammeType.BTECH, department="CS", batch="2024", is_verified=True)
+            student = StudentAuth(
+                name="Test Student", 
+                email="test@uni.edu", 
+                enrollment_no="T-001", 
+                password_hash="fake", 
+                programme=ProgrammeType.BTECH, 
+                department="CS", 
+                batch="2024", 
+                is_verified=True
+            )
             db.add(student)
             await db.commit()
             await db.refresh(student)
 
         # 2. Check for existing project or create new
-        query_existing = select(ProjectSubmission).where(ProjectSubmission.leader_id == student.id)
+        query_existing = select(ProjectSubmission).where(
+            and_(
+                ProjectSubmission.leader_id == student.id,
+                ProjectSubmission.is_deleted == False
+            )
+        )
         result_proj = await db.execute(query_existing)
         project = result_proj.scalar_one_or_none()
 
         if not project:
             proposal_data = ProjectSubmissionCreateSchema(
-                guide_id=guide.id, academic_year="2025-26", semester=6,
+                academic_year="2025-26", semester=6,
                 phase_1_data=Phase1DataSchema(
                     title="Smart Energy Grid using AI",
                     abstract="This project aims to optimize energy distribution in urban areas using reinforcement learning to reduce wastage during peak hours by 15%.",
                     domain="AI / Green Tech",
                     objectives=["Predict demand", "Optimize distribution"],
-                    tech_stack=["Python", "TensorFlow", "FastAPI"]
+                    tech_stack=["Python", "TensorFlow", "FastAPI"],
+                    use_case_diagram="data:image/png;base64,fake-image-data"
                 )
             )
             project = await ProjectService.create_submission(db, student.id, proposal_data)
         
-        # 3. Faculty Approve
         print(f"Project ID: {project.id} | Team ID: {project.team_id}")
-        # Reset status to PENDING if needed to trigger a fresh evaluation
-        project.guide_status = GuideStatus.PENDING
-        await db.commit()
 
-        print("\n--- [ACTION: Faculty Approving Project] ---")
-        await ProjectService.approve_submission(
-            db=db, submission_id=project.id, guide_id=guide.id, 
-            status=GuideStatus.ACCEPTED, feedback="Looks promising."
-        )
-
-        # 4. WAIT for AI to finish (Polling)
+        # 3. WAIT for AI to finish (Polling)
+        # Evaluation is triggered automatically upon creation
         print("\n--- [WAITING: Polling for AI Evaluation Result...] ---")
         for i in range(24): # Wait up to 120 seconds (5s * 24)
             await asyncio.sleep(5)
@@ -87,6 +84,9 @@ async def run_full_phase1_test():
                     elif evaluation.status == EvaluationStatus.FAILED:
                         print(f"\n--- [FINAL RESULT: AI EVALUATION FAILED] ---")
                         print(f"Error: {evaluation.ai_narrative}")
+                        return
+                    elif evaluation.status == EvaluationStatus.AWAITING_CLARIFICATION:
+                        print(f"  Attempt {i+1}: Status = AWAITING_CLARIFICATION. Stopping poll.")
                         return
                 else:
                     print(f"  Attempt {i+1}: No evaluation record yet...")

@@ -10,10 +10,12 @@ class EvaluationPhase(str, enum.Enum):
     PHASE_1 = "PHASE_1"
     PHASE_2 = "PHASE_2"
     FINAL = "FINAL"
+    INTERVIEW = "INTERVIEW"
 
 class EvaluationStatus(str, enum.Enum):
     PENDING = "PENDING"
     IN_PROGRESS = "IN_PROGRESS"
+    AWAITING_CLARIFICATION = "AWAITING_CLARIFICATION"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
 
@@ -23,7 +25,6 @@ class Evaluation(Base, TimestampMixin):
     __tablename__ = "evaluations"
 
     submission_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("project_submissions.id"), nullable=False)
-    faculty_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("faculty.id"), nullable=False)
     
     phase: Mapped[EvaluationPhase] = mapped_column(Enum(EvaluationPhase), nullable=False)
     status: Mapped[EvaluationStatus] = mapped_column(
@@ -39,14 +40,18 @@ class Evaluation(Base, TimestampMixin):
     total_score: Mapped[Optional[float]] = mapped_column(Float)
     grade: Mapped[Optional[str]] = mapped_column(String(5)) # e.g., "A+", "B"
     
+    # NEW: Store multi-agent reasoning logs as a list of dictionaries
+    agent_logs: Mapped[Optional[list]] = mapped_column(JSONB)
+    
     # Metadata for the agent run
     agent_trace_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True))
     
     # Relationship links
     submission = relationship("ProjectSubmission", back_populates="evaluations")
-    evaluator = relationship("Faculty", backref="evaluations_performed")
     criterion_scores = relationship("EvaluationCriterionScore", back_populates="evaluation", cascade="all, delete-orphan")
     member_evaluations = relationship("MemberEvaluation", back_populates="evaluation", cascade="all, delete-orphan")
+    viva_questions = relationship("VivaQuestion", back_populates="evaluation", cascade="all, delete-orphan")
+    integrity_flags = relationship("IntegrityFlag", back_populates="evaluation", cascade="all, delete-orphan")
 
 class EvaluationCriterionScore(Base, TimestampMixin):
     """Detailed scores for specific criteria (e.g., Innovation, Code Quality)."""
@@ -101,5 +106,5 @@ class VivaQuestion(Base, TimestampMixin):
     difficulty: Mapped[str] = mapped_column(String(50)) # "BASIC", "INTERMEDIATE", "ADVANCED"
     
     # Relationships
-    evaluation = relationship("Evaluation", backref="all_viva_questions")
+    evaluation = relationship("Evaluation", back_populates="viva_questions")
     member_evaluation = relationship("MemberEvaluation", back_populates="viva_questions")

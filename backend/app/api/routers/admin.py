@@ -5,51 +5,34 @@ from uuid import UUID
 
 from app.api.deps import get_db
 from app.api.schemas.admin import (
-    FacultyCreateSchema, 
-    FacultyResponseSchema, 
-    AdminReplaceGuideSchema, 
+    AdminCreateSchema, 
+    AdminResponseSchema, 
     AdminProjectActionSchema,
     BulkStudentUploadSchema,
-    GuideProfileResponseSchema,
     RegisteredStudentResponseSchema,
 )
 from app.api.schemas.projects import ProjectSubmissionResponseSchema
+from app.db.Models import EvaluationPhase
 from app.services.admin_service import AdminService
-from app.services.notification_service import NotificationService
 
 router = APIRouter()
 
-# --- FACULTY MANAGEMENT ---
+# --- ADMIN MANAGEMENT ---
 
-@router.post("/users/faculty", response_model=FacultyResponseSchema, status_code=status.HTTP_201_CREATED)
-async def create_faculty(
-    faculty_data: FacultyCreateSchema,
+@router.post("/users/admins", response_model=AdminResponseSchema, status_code=status.HTTP_201_CREATED)
+async def create_admin(
+    admin_data: AdminCreateSchema,
     db: AsyncSession = Depends(get_db),
 ):
-    """Register a new faculty member (Admin only)."""
-    return await AdminService.create_faculty(db, faculty_data)
+    """Register a new administrator (Admin only)."""
+    return await AdminService.create_admin(db, admin_data)
 
-@router.get("/users/faculty", response_model=List[FacultyResponseSchema])
-async def list_faculty(
+@router.get("/users/admins", response_model=List[AdminResponseSchema])
+async def list_admins(
     db: AsyncSession = Depends(get_db),
 ):
-    """List all registered faculty members (Admin only)."""
-    return await AdminService.get_all_faculty(db)
-
-@router.get("/users/faculty/load")
-async def get_faculty_load(
-    db: AsyncSession = Depends(get_db),
-):
-    """Admin only: View faculty project counts (Load Balancer)."""
-    return await AdminService.get_guide_load(db)
-
-@router.get("/users/faculty/{guide_id}", response_model=GuideProfileResponseSchema)
-async def get_guide_profile(
-    guide_id: UUID,
-    db: AsyncSession = Depends(get_db),
-):
-    """Admin only: View a detailed profile of a specific faculty member."""
-    return await AdminService.get_guide_profile(db, guide_id)
+    """List all registered administrators (Admin only)."""
+    return await AdminService.get_all_admins(db)
 
 @router.get("/reports/cohort")
 async def get_admin_overview(
@@ -67,14 +50,37 @@ async def list_all_projects(
     """View all project submissions (Admin only)."""
     return await AdminService.get_all_projects(db)
 
-@router.patch("/projects/{project_id}/guide", response_model=ProjectSubmissionResponseSchema)
-async def reassign_project_guide(
-    project_id: UUID,
-    payload: AdminReplaceGuideSchema,
+@router.get("/evaluations")
+async def list_all_evaluations(
     db: AsyncSession = Depends(get_db),
 ):
-    """Forcibly reassign a new guide to a project (Admin only)."""
-    return await AdminService.reassign_guide(db, project_id, payload)
+    """View all AI evaluations with project context (Admin only)."""
+    return await AdminService.get_all_evaluations(db)
+
+@router.get("/projects/{project_id}/evaluations")
+async def list_project_evaluations(
+    project_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """View all AI evaluations for a project submission (Admin only)."""
+    return await AdminService.get_project_evaluations(db, project_id)
+
+@router.get("/evaluations/{submission_id}/{phase}")
+async def get_evaluation_detail(
+    submission_id: UUID,
+    phase: EvaluationPhase,
+    db: AsyncSession = Depends(get_db),
+):
+    """View the latest complete AI evaluation for a project phase (Admin only)."""
+    return await AdminService.get_evaluation_detail(db, submission_id, phase)
+
+@router.delete("/evaluations/{evaluation_id}")
+async def delete_evaluation(
+    evaluation_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete an evaluation record (Admin only)."""
+    return await AdminService.delete_evaluation(db, evaluation_id)
 
 @router.patch("/projects/{project_id}/status", response_model=ProjectSubmissionResponseSchema)
 async def update_project_status(
@@ -92,19 +98,6 @@ async def delete_project(
 ):
     """Soft-delete a project (Admin only). Resets student dashboard."""
     return await AdminService.delete_project(db, project_id)
-
-@router.post("/projects/{project_id}/send-to-guide")
-async def send_project_to_guide(
-    project_id: UUID,
-    db: AsyncSession = Depends(get_db),
-):
-    """Send a Phase 1 project to its assigned guide (Admin only). Creates a notification and adds to guide's teams."""
-    notification = await NotificationService.send_project_to_guide(db, project_id)
-    return {
-        "status": "sent",
-        "notification_id": str(notification.id),
-        "message": "Project sent to guide successfully"
-    }
 
 # --- STUDENT MANAGEMENT ---
 
@@ -129,3 +122,21 @@ async def get_whitelist(
 ):
     """View university enrollment records used for registration validation (Admin only)."""
     return await AdminService.get_all_preapproved_students(db)
+
+
+@router.delete("/users/students/whitelist/{student_id}")
+async def delete_preapproved_student(
+    student_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete a university enrollment record (Admin only)."""
+    return await AdminService.delete_preapproved_student(db, student_id)
+
+
+@router.delete("/users/students/{student_id}")
+async def delete_student(
+    student_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete a student and all related data (Admin only)."""
+    return await AdminService.delete_student(db, student_id)

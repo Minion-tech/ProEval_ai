@@ -1,13 +1,14 @@
 import uuid
 import  random
 import string
+import json
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func
 from fastapi import HTTPException, status
 from typing import Optional
 
-from app.db.Models import ProjectSubmission, TeamMembership, StudentAuth, ProjectPhase, GuideStatus, EvaluationPhase
+from app.db.Models import ProjectSubmission, TeamMembership, StudentAuth, ProjectPhase, EvaluationPhase, NotificationType
 from app.api.schemas.projects import (
     ProjectSubmissionCreateSchema,
     Phase2SubmissionSchema,
@@ -15,7 +16,16 @@ from app.api.schemas.projects import (
     TeamJoinSchema,
 )
 from app.services.evaluation_service import EvaluationService
-import asyncio
+from app.services.notification_service import NotificationService
+from app.tasks.evaluation_queue import (
+    enqueue_final_analysis,
+    enqueue_member_orientation,
+    enqueue_phase_1_analysis,
+    enqueue_phase_1_architect_review,
+    enqueue_phase_2_analysis,
+)
+from app.core.config import settings
+from app.core.ai_provider import create_generation_model
 
 class ProjectService:
     @staticmethod
@@ -32,6 +42,26 @@ class ProjectService:
         )
         result = await db.execute(query)
         return result.scalar_one_or_none()
+
+    @staticmethod
+    def _cleanse_project_data(data: dict) -> dict:
+        """
+        Recursively strips large base64 strings from project data to keep API responses lightweight.
+        """
+        if not data: return data
+        
+        # Keys that often contain massive binary/base64 data
+        LARGE_FIELD_KEYS = ["use_case_diagram", "final_report_url", "presentation_url"]
+        
+        cleaned = data.copy()
+        for key, value in cleaned.items():
+            if key in LARGE_FIELD_KEYS and isinstance(value, str) and value.startswith("data:"):
+                # Replace large base64 with a metadata placeholder
+                cleaned[key] = f"[Large Binary Data: {len(value) // 1024} KB stripped for API performance]"
+            elif isinstance(value, dict):
+                cleaned[key] = ProjectService._cleanse_project_data(value)
+        
+        return cleaned
 
     @staticmethod
     async def get_my_project(
@@ -75,11 +105,21 @@ class ProjectService:
                 active_membership = m
             else:
                 # This is a DELETED/PREVIOUS project
+                # Cleanse data before adding to history
+                project.phase_1_data = ProjectService._cleanse_project_data(project.phase_1_data)
+                project.phase_2_data = ProjectService._cleanse_project_data(project.phase_2_data)
+                project.final_data = ProjectService._cleanse_project_data(project.final_data)
                 active_project_data["previous_projects"].append(project)
 
         # 4. If an active project was found, fetch its members
         if active_membership:
             project = all_projects[active_membership.submission_id]
+            
+            # CLEANSE: Strip huge base64 strings before returning
+            project.phase_1_data = ProjectService._cleanse_project_data(project.phase_1_data)
+            project.phase_2_data = ProjectService._cleanse_project_data(project.phase_2_data)
+            project.final_data = ProjectService._cleanse_project_data(project.final_data)
+
             from sqlalchemy.orm import joinedload
             members_query = select(TeamMembership).where(
                 TeamMembership.submission_id == project.id
@@ -103,6 +143,17 @@ class ProjectService:
                 }
                 for mem in members
             ]
+
+            # 5. Fetch latest evaluation status for gating
+            from app.db.Models import Evaluation
+            eval_query = select(Evaluation).where(
+                Evaluation.submission_id == project.id
+            ).order_by(Evaluation.created_at.desc()).limit(1)
+            eval_result = await db.execute(eval_query)
+            latest_eval = eval_result.scalar_one_or_none()
+            if latest_eval:
+                active_project_data["latest_evaluation_status"] = latest_eval.status
+                active_project_data["latest_evaluation_phase"] = latest_eval.phase
 
         return active_project_data
 
@@ -157,7 +208,7 @@ class ProjectService:
                 "id": p.id,
                 "team_id": p.team_id,
                 "attempt_number": p.attempt_number,
-                "phase_1_data": p.phase_1_data,
+                "phase_1_data": ProjectService._cleanse_project_data(p.phase_1_data),
                 "evaluation_status": evaluation.status if evaluation else None,
                 "evaluation_score": score,
                 "evaluation_grade": evaluation.grade if evaluation else None,
@@ -225,7 +276,13 @@ class ProjectService:
         - Generates a unique team ID.
         - Creates the Project record.
         - Adds the leader to the TeamMembership table.
+        - Dev Mode: Automatically archives old projects for the test user.
         """
+        # Fetch leader email for Dev Mode check
+        leader_res = await db.execute(select(StudentAuth.email).where(StudentAuth.id == leader_id))
+        leader_email = leader_res.scalar_one_or_none()
+        is_test_user = settings.ENABLE_TEST_MODE and leader_email == settings.TEST_USER_EMAIL
+
         # Enforce one active project per student for a simpler workflow.
         existing_project_query = select(ProjectSubmission).where(
             and_(
@@ -237,57 +294,84 @@ class ProjectService:
         existing_project = existing_project_result.scalar_one_or_none()
 
         if existing_project:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="You already have an active project. Edit and resubmit your Phase 1 form instead.",
-            )
+            if is_test_user:
+                # Dev Mode Bypass: Allow up to 3 active proposals for testing
+                active_count_res = await db.execute(
+                    select(func.count(ProjectSubmission.id)).where(
+                        and_(
+                            ProjectSubmission.leader_id == leader_id,
+                            ProjectSubmission.is_deleted == False,
+                        )
+                    )
+                )
+                active_count = active_count_res.scalar()
+                
+                if active_count >= 3:
+                    # If already 3, delete the oldest one to make room
+                    oldest_query = select(ProjectSubmission).where(
+                        and_(
+                            ProjectSubmission.leader_id == leader_id,
+                            ProjectSubmission.is_deleted == False,
+                        )
+                    ).order_by(ProjectSubmission.created_at.asc()).limit(1)
+                    oldest_res = await db.execute(oldest_query)
+                    oldest = oldest_res.scalar_one_or_none()
+                    if oldest:
+                        oldest.is_deleted = True
+                        await db.flush()
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="You already have an active project. Edit and resubmit your Phase 1 form instead.",
+                )
         
-        #2 Generate unique Team ID
+        # 2 Generate unique Team ID
         team_id = await ProjectService.generate_team_id(db, data.academic_year)
+        
+        # Calculate attempt number
+        attempt_res = await db.execute(
+            select(func.count(ProjectSubmission.id)).where(
+                ProjectSubmission.leader_id == leader_id
+            )
+        )
+        total_attempts = attempt_res.scalar()
 
-        #3. Create the ProjectSubmission record 
+        # 3. Create the ProjectSubmission record 
         new_submission = ProjectSubmission(
             team_id=team_id,
             leader_id=leader_id,
-            guide_id=data.guide_id,
-            phase_1_data=data.phase_1_data.model_dump(), # Convert Pydantic to Dict
+            phase_1_data=data.phase_1_data.model_dump(),
             current_phase=ProjectPhase.PHASE_1,
-            guide_status=GuideStatus.PENDING,
             academic_year=data.academic_year,
             semester=data.semester,
-            attempt_number=1,
+            attempt_number=total_attempts + 1,
         )
         db.add(new_submission)
-        await db.flush() #this gives us the id of the new submission without committing yet 
+        await db.flush()
 
-        #4. Add the leader to the TeamMembership table
-        leader_membership = TeamMembership(
+        # Create team membership for leader
+        new_member = TeamMembership(
             submission_id=new_submission.id,
             student_id=leader_id,
-            role="Team Leader",
-            functions="Project Coordination",
-            modules="All (Overview)"
+            role="Leader / Product Manager",
+            functions="Overall coordination, strategy, and vision.",
+            modules="All",
+            tech_stack=", ".join(data.phase_1_data.tech_stack),
+            work_description="Leading the project development and coordination."
         )
-        db.add(leader_membership)
+        db.add(new_member)
+        await db.flush()
 
-        #5 Save everything to the databse
-        await db.commit()
-        await db.refresh(new_submission) # Refresh to get the latest state from the database
-        await db.refresh(leader_membership)
-
-        # 6. TRIGGER AI ORIENTATION for the Leader
-        asyncio.create_task(EvaluationService.generate_member_orientation(leader_membership.id))
-
-        # 7. TRIGGER AI EVALUATION for Phase 1 (Initial automated feedback)
-        # We use the assigned guide_id as the faculty_id for the record
+        # 7. TRIGGER Phase 1 Ideator / clarification stage
         new_eval = await EvaluationService.create_evaluation_record(
             db=db,
             submission_id=new_submission.id,
-            faculty_id=data.guide_id,
             phase=EvaluationPhase.PHASE_1
         )
-        asyncio.create_task(EvaluationService.run_phase_1_analysis(new_eval.id))
+        enqueue_phase_1_analysis(new_eval.id)
 
+        await db.commit()
+        await db.refresh(new_submission)
         return new_submission
 
     @staticmethod
@@ -316,33 +400,32 @@ class ProjectService:
             )
 
         project.phase_1_data = data.phase_1_data.model_dump()
-        project.guide_id = data.guide_id
         project.academic_year = data.academic_year
         project.semester = data.semester
         project.current_phase = ProjectPhase.PHASE_1
-        project.guide_status = GuideStatus.PENDING
 
         await db.commit()
         await db.refresh(project)
 
+        # Trigger Phase 1 Ideator / clarification stage
         new_eval = await EvaluationService.create_evaluation_record(
             db=db,
             submission_id=project.id,
-            faculty_id=data.guide_id,
             phase=EvaluationPhase.PHASE_1,
         )
-        asyncio.create_task(EvaluationService.run_phase_1_analysis(new_eval.id))
+        enqueue_phase_1_analysis(new_eval.id)
 
         return project
 
     @staticmethod
-    async def send_phase_1_to_guide(
+    async def submit_phase_1_clarifications(
         db: AsyncSession,
         submission_id: uuid.UUID,
         leader_id: uuid.UUID,
+        answers: list[str],
     ) -> ProjectSubmission:
         """
-        Marks the project as sent to guide after student reviews AI feedback.
+        Stores leader clarification answers and re-runs Phase 1 Ideator evaluation.
         """
         project = await ProjectService.get_submission_by_id(db, submission_id)
 
@@ -355,84 +438,22 @@ class ProjectService:
         if project.leader_id != leader_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only the team leader can send this project to guide.",
+                detail="Only the team leader can submit clarification answers.",
             )
 
-        if not project.phase_1_data:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Phase 1 data not found.",
-            )
-
-        phase_data = dict(project.phase_1_data)
-        phase_data["sent_to_guide"] = True
-        phase_data["sent_to_guide_at"] = datetime.utcnow().isoformat()
+        phase_data = dict(project.phase_1_data or {})
+        phase_data["clarification_answers"] = answers
         project.phase_1_data = phase_data
-        project.guide_status = GuideStatus.PENDING
-
-        await db.commit()
-        await db.refresh(project)
-        return project
-
-    @staticmethod
-    async def approve_submission(
-        db: AsyncSession, 
-        submission_id: uuid.UUID,
-        guide_id: uuid.UUID,
-        status: GuideStatus,
-        feedback: Optional[str] = None
-    ) -> ProjectSubmission:
-        """
-        Handles the Guide Approval/Rejection of a Phase 1 submission.
-        """
-        # 1. Fetch the project
-        project = await ProjectService.get_submission_by_id(db, submission_id)
-
-        if not project:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Project submission not found."
-            )
-
-        # 2. Security: Check if this faculty is the assigned guide
-        if project.guide_id != guide_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You are not the assigned guide for this project."
-            )
-
-        # 3. Rule: Can only approve if status is currently PENDING
-        if project.guide_status != GuideStatus.PENDING:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Project is already {project.guide_status}."
-            )
-
-        # 4. Update the status
-        project.guide_status = status
-
-        # 5. Store feedback if provided (using a flexible approach)
-        if feedback:
-            # We add it to the phase_1_data for now
-            current_data = dict(project.phase_1_data) if project.phase_1_data else {}
-            current_data["guide_feedback"] = feedback
-            project.phase_1_data = current_data
 
         await db.commit()
         await db.refresh(project)
 
-        # 6. TRIGGER AI EVALUATION (Automatically if status is ACCEPTED)
-        if status == GuideStatus.ACCEPTED:
-            # a. Create a pending evaluation record
-            new_eval = await EvaluationService.create_evaluation_record(
-                db=db,
-                submission_id=project.id,
-                faculty_id=guide_id,
-                phase=EvaluationPhase.PHASE_1
-            )
-
-            # b. Fire-and-forget background task
-            asyncio.create_task(EvaluationService.run_phase_1_analysis(new_eval.id))
+        new_eval = await EvaluationService.create_evaluation_record(
+            db=db,
+            submission_id=project.id,
+            phase=EvaluationPhase.PHASE_1,
+        )
+        enqueue_phase_1_analysis(new_eval.id)
 
         return project
 
@@ -460,86 +481,33 @@ class ProjectService:
                 detail="Only the team leader can submit Phase 2 data.",
             )
 
-        # Softened gating for testing (allow if eval is missing or not yet completed)
-        # In production, we'd strictly check for COMPLETED status.
-        phase_1_eval = await EvaluationService.get_latest_evaluation(
-            db=db,
-            submission_id=submission_id,
-            phase=EvaluationPhase.PHASE_1,
-        )
-        # Bypass check for testing
-        # if not phase_1_eval or phase_1_eval.status.value != "COMPLETED":
-        #    ...
+        # Dev Mode Bypass for Gating
+        leader_res = await db.execute(select(StudentAuth.email).where(StudentAuth.id == leader_id))
+        leader_email = leader_res.scalar_one_or_none()
+        is_test_user = settings.ENABLE_TEST_MODE and leader_email == settings.TEST_USER_EMAIL
+
+        if not is_test_user:
+            # Gating rules for non-test users
+            phase_1_eval = await EvaluationService.get_latest_evaluation(
+                db=db,
+                submission_id=submission_id,
+                phase=EvaluationPhase.PHASE_1,
+            )
+            # Softened gating: In production, we'd strictly check for COMPLETED status.
 
         project.phase_2_data = data.phase_2_data.model_dump()
         project.current_phase = ProjectPhase.PHASE_2
-        project.guide_status = GuideStatus.PENDING
-
-        await db.commit()
-        await db.refresh(project)
-        return project
-
-    @staticmethod
-    async def review_phase_2(
-        db: AsyncSession,
-        submission_id: uuid.UUID,
-        guide_id: uuid.UUID,
-        status: GuideStatus,
-        feedback: Optional[str] = None,
-    ) -> ProjectSubmission:
-        """
-        Handles the guide decision for the Phase 2 submission and triggers evaluation.
-        """
-        project = await ProjectService.get_submission_by_id(db, submission_id)
-
-        if not project:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Project submission not found.",
-            )
-
-        if project.guide_id != guide_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You are not the assigned guide for this project.",
-            )
-
-        if not project.phase_2_data:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Phase 2 data has not been submitted yet.",
-            )
-
-        if project.current_phase not in {ProjectPhase.PHASE_2, ProjectPhase.FINAL}:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="This project is not ready for Phase 2 review.",
-            )
-
-        if project.guide_status != GuideStatus.PENDING:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Project is already {project.guide_status}.",
-            )
-
-        project.guide_status = status
-
-        if feedback:
-            current_data = dict(project.phase_2_data)
-            current_data["guide_feedback"] = feedback
-            project.phase_2_data = current_data
 
         await db.commit()
         await db.refresh(project)
 
-        if status == GuideStatus.ACCEPTED:
-            new_eval = await EvaluationService.create_evaluation_record(
-                db=db,
-                submission_id=project.id,
-                faculty_id=guide_id,
-                phase=EvaluationPhase.PHASE_2,
-            )
-            asyncio.create_task(EvaluationService.run_phase_2_analysis(new_eval.id))
+        # Trigger Phase 2 AI Analysis
+        new_eval = await EvaluationService.create_evaluation_record(
+            db=db,
+            submission_id=project.id,
+            phase=EvaluationPhase.PHASE_2,
+        )
+        enqueue_phase_2_analysis(new_eval.id)
 
         return project
 
@@ -561,59 +529,30 @@ class ProjectService:
         if project.leader_id != leader_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the leader can submit.")
 
-        # Softened gating for testing (allow if eval is missing or not yet completed)
-        # In production, we'd strictly check for COMPLETED status.
-        phase_2_eval = await EvaluationService.get_latest_evaluation(
-            db=db, submission_id=submission_id, phase=EvaluationPhase.PHASE_2
-        )
-        # Bypass check for testing
-        # if not phase_2_eval or phase_2_eval.status != EvaluationStatus.COMPLETED:
-        #    ...
+        # Dev Mode Bypass for Gating
+        leader_res = await db.execute(select(StudentAuth.email).where(StudentAuth.id == leader_id))
+        leader_email = leader_res.scalar_one_or_none()
+        is_test_user = settings.ENABLE_TEST_MODE and leader_email == settings.TEST_USER_EMAIL
+
+        if not is_test_user:
+            # Gating rules for non-test users
+            phase_2_eval = await EvaluationService.get_latest_evaluation(
+                db=db, submission_id=submission_id, phase=EvaluationPhase.PHASE_2
+            )
 
         project.final_data = data.final_data.model_dump()
         project.current_phase = ProjectPhase.FINAL
-        project.guide_status = GuideStatus.PENDING
-
-        await db.commit()
-        await db.refresh(project)
-        return project
-
-    @staticmethod
-    async def review_final(
-        db: AsyncSession,
-        submission_id: uuid.UUID,
-        guide_id: uuid.UUID,
-        status: GuideStatus,
-        feedback: Optional[str] = None,
-    ) -> ProjectSubmission:
-        """
-        Guide's final review. Triggers the Chief AI Evaluator.
-        """
-        project = await ProjectService.get_submission_by_id(db, submission_id)
-
-        if not project or project.guide_id != guide_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
-
-        if project.current_phase != ProjectPhase.FINAL:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not in final phase.")
-
-        project.guide_status = status
-        if feedback:
-            current_data = dict(project.final_data) if project.final_data else {}
-            current_data["guide_feedback"] = feedback
-            project.final_data = current_data
 
         await db.commit()
         await db.refresh(project)
 
-        if status == GuideStatus.ACCEPTED:
-            new_eval = await EvaluationService.create_evaluation_record(
-                db=db,
-                submission_id=project.id,
-                faculty_id=guide_id,
-                phase=EvaluationPhase.FINAL,
-            )
-            asyncio.create_task(EvaluationService.run_final_analysis(new_eval.id))
+        # Trigger Final AI Audit
+        new_eval = await EvaluationService.create_evaluation_record(
+            db=db,
+            submission_id=project.id,
+            phase=EvaluationPhase.FINAL,
+        )
+        enqueue_final_analysis(new_eval.id)
 
         return project
 
@@ -621,14 +560,14 @@ class ProjectService:
     async def join_team(
         db: AsyncSession, 
         student_id: uuid.UUID, 
-        data: TeamJoinSchema
+        params: TeamJoinSchema
     ) -> TeamMembership:
         """
         Logic for a student to join an existing project team.
         Enforces the 'Max 3 Members' rule.
         """
         # 1. FIND the project
-        query = select(ProjectSubmission).where(ProjectSubmission.team_id == data.team_id)
+        query = select(ProjectSubmission).where(ProjectSubmission.team_id == params.team_id)
         result = await db.execute(query)
         project = result.scalar_one_or_none()
 
@@ -669,17 +608,51 @@ class ProjectService:
         new_member = TeamMembership(
             submission_id=project.id,
             student_id=student_id,
-            role=data.role,
-            functions=data.functions,
-            modules=data.modules,
-            tech_stack=data.tech_stack,
-            work_description=data.work_description,
+            role=params.role,
+            functions=params.functions,
+            modules=(params.modules or "").strip() or "General Support",
+            tech_stack=params.tech_stack,
+            work_description=params.work_description,
         )
         db.add(new_member)
         await db.commit()
         await db.refresh(new_member)
 
         # 5. TRIGGER AI ORIENTATION (Personalized Technical Onboarding)
-        asyncio.create_task(EvaluationService.generate_member_orientation(new_member.id))
+        enqueue_member_orientation(new_member.id)
+
+        # 6. Trigger Architect only when the team is fully formed (leader + 2 teammates).
+        is_architect_triggered = False
+        message = "Welcome to the team! You can now check the Phase 1 AI evaluation in the feedback page."
+        
+        if current_count + 1 >= 3:
+            is_architect_triggered = True
+            message = "Welcome! You are the 3rd member. All teammates have joined, so the Architecture review has been triggered. You can also check the Phase 1 AI evaluation in the feedback page."
+            
+            # Fetch latest Ideator logs to maintain continuity
+            latest_eval = await EvaluationService.get_latest_evaluation(db, project.id, EvaluationPhase.PHASE_1)
+            ideator_logs = latest_eval.agent_logs if (latest_eval and latest_eval.agent_logs) else None
+
+            new_eval = await EvaluationService.create_evaluation_record(
+                db=db,
+                submission_id=project.id,
+                phase=EvaluationPhase.PHASE_1,
+                agent_logs=ideator_logs
+            )
+            enqueue_phase_1_architect_review(new_eval.id)
+
+        # Create notification for the student
+        await NotificationService.create_notification(
+            db=db,
+            project_id=project.id,
+            notification_type=NotificationType.FEEDBACK_RECEIVED,
+            title="Team Joined Successfully",
+            message=message,
+            student_id=student_id
+        )
+
+        # Add transient fields for the response
+        new_member.message = message
+        new_member.is_architect_triggered = is_architect_triggered
 
         return new_member

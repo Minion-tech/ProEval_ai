@@ -4,9 +4,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 from typing import Optional, Any
 
-from app.api.deps import get_current_faculty, get_current_student, get_current_user
+from app.api.deps import get_current_student, get_current_user
 from app.db.session import get_db
 from app.api.schemas.projects import (
+    ClarificationAnswersSchema,
     EvaluationResponseSchema,
     Phase2SubmissionSchema,
     ProjectSubmissionCreateSchema,
@@ -21,11 +22,11 @@ from app.services.evaluation_service import EvaluationService
 from app.services.project_service import ProjectService
 from app.db.Models import (
     EvaluationPhase,
-    Faculty,
-    FacultyRole,
-    GuideStatus,
+    AdminUser,
+    AdminRole,
     StudentAuth,
     TeamMembership,
+    ProjectPhase
 )
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
@@ -34,13 +35,13 @@ router = APIRouter(prefix="/projects", tags=["Projects"])
 async def _ensure_submission_view_access(
     db: AsyncSession,
     submission_id: UUID,
-    current_user: StudentAuth | Faculty,
+    current_user: StudentAuth | AdminUser,
 ) -> None:
     """
     Enforce project visibility rules before returning evaluation details.
 
     Students can view only if they lead or belong to the team.
-    Faculty can view only if they are the assigned guide or an admin.
+    Admins can view all projects.
     """
     submission = await ProjectService.get_submission_by_id(db, submission_id)
     if not submission:
@@ -66,7 +67,7 @@ async def _ensure_submission_view_access(
             detail="You do not have access to this project.",
         )
 
-    if current_user.role == FacultyRole.ADMIN or submission.guide_id == current_user.id:
+    if current_user.role == AdminRole.ADMIN:
         return
 
     raise HTTPException(
@@ -122,19 +123,21 @@ async def resubmit_phase_1(
 
 
 @router.post(
-    "/{submission_id}/phase-1/send-to-guide",
+    "/{submission_id}/phase-1/clarifications",
     response_model=ProjectSubmissionResponseSchema,
 )
-async def send_phase_1_to_guide(
+async def submit_phase_1_clarifications(
     submission_id: UUID,
+    data: ClarificationAnswersSchema,
     db: AsyncSession = Depends(get_db),
     current_student: StudentAuth = Depends(get_current_student),
 ) -> ProjectSubmissionResponseSchema:
-    """Mark the project as sent to guide after student reviews AI feedback."""
-    return await ProjectService.send_phase_1_to_guide(
+    """Submit Phase 1 clarification answers before final Ideator mentorship."""
+    return await ProjectService.submit_phase_1_clarifications(
         db=db,
         submission_id=submission_id,
         leader_id=current_student.id,
+        answers=data.answers,
     )
 
 @router.get("/my-project", response_model=Optional[MyProjectResponseSchema])
@@ -177,23 +180,6 @@ async def select_proposal(
         submission_id=submission_id,
     )
 
-@router.patch("/{submission_id}/approve", response_model=ProjectSubmissionResponseSchema)
-async def approve_project(
-    submission_id: UUID,
-    status: GuideStatus,
-    feedback: Optional[str] = None,
-    db: AsyncSession = Depends(get_db),
-    current_faculty: Faculty = Depends(get_current_faculty),
-) -> ProjectSubmissionResponseSchema:
-    """Endpoint for the guide to approve or reject a project proposal"""
-    return await ProjectService.approve_submission(
-        db=db,
-        submission_id=submission_id,
-        guide_id=current_faculty.id,
-        status=status,
-        feedback=feedback,
-    )
-
 @router.post(
     "/phase-2/{submission_id}",
     response_model=ProjectSubmissionResponseSchema,
@@ -210,27 +196,6 @@ async def submit_phase_2(
         submission_id=submission_id,
         leader_id=current_student.id,
         data=data,
-    )
-
-
-@router.patch(
-    "/phase-2/{submission_id}/review",
-    response_model=ProjectSubmissionResponseSchema,
-)
-async def review_phase_2(
-    submission_id: UUID,
-    status: GuideStatus,
-    feedback: Optional[str] = None,
-    db: AsyncSession = Depends(get_db),
-    current_faculty: Faculty = Depends(get_current_faculty),
-) -> ProjectSubmissionResponseSchema:
-    """Endpoint for the assigned guide to review the Phase 2 submission."""
-    return await ProjectService.review_phase_2(
-        db=db,
-        submission_id=submission_id,
-        guide_id=current_faculty.id,
-        status=status,
-        feedback=feedback,
     )
 
 @router.post(
@@ -251,28 +216,6 @@ async def submit_final_project(
         data=data,
     )
 
-
-@router.patch(
-    "/final/{submission_id}/review",
-    response_model=ProjectSubmissionResponseSchema,
-)
-async def review_final_project(
-    submission_id: UUID,
-    status: GuideStatus,
-    feedback: Optional[str] = None,
-    db: AsyncSession = Depends(get_db),
-    current_faculty: Faculty = Depends(get_current_faculty),
-) -> ProjectSubmissionResponseSchema:
-    """Endpoint for the assigned guide to review the Final submission and trigger grading."""
-    return await ProjectService.review_final(
-        db=db,
-        submission_id=submission_id,
-        guide_id=current_faculty.id,
-        status=status,
-        feedback=feedback,
-    )
-
-
 @router.get(
     "/{submission_id}/evaluations/{phase}",
     response_model=EvaluationResponseSchema,
@@ -281,7 +224,7 @@ async def get_project_evaluation(
     submission_id: UUID,
     phase: EvaluationPhase,
     db: AsyncSession = Depends(get_db),
-    current_user: StudentAuth | Faculty = Depends(get_current_user),
+    current_user: StudentAuth | AdminUser = Depends(get_current_user),
 ) -> EvaluationResponseSchema:
     """Return the latest evaluation for a given submission phase."""
     await _ensure_submission_view_access(
@@ -290,7 +233,7 @@ async def get_project_evaluation(
         current_user=current_user,
     )
 
-    evaluation = await EvaluationService.get_submission_evaluation(
+    evaluation = await EvaluationService.get_latest_evaluation(
         db=db,
         submission_id=submission_id,
         phase=phase,
@@ -318,5 +261,27 @@ async def join_existing_team(
     return await ProjectService.join_team(
         db=db,
         student_id=current_student.id,
-        data=data,
+        params=data,
     )
+
+
+@router.patch("/{submission_id}/view-feedback", status_code=status.HTTP_204_NO_CONTENT)
+async def mark_feedback_viewed(
+    submission_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_student: StudentAuth = Depends(get_current_student),
+):
+    """Marks that the current student has viewed the project feedback to dismiss dashboard alerts."""
+    from sqlalchemy import and_, update
+    await db.execute(
+        update(TeamMembership)
+        .where(
+            and_(
+                TeamMembership.submission_id == submission_id,
+                TeamMembership.student_id == current_student.id,
+            )
+        )
+        .values(has_viewed_feedback=True)
+    )
+    await db.commit()
+    return None

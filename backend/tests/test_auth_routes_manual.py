@@ -13,8 +13,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.api.deps import get_current_faculty, get_current_student, get_current_user
-from app.db.Models import Faculty, FacultyRole, GuideStatus, ProgrammeType, StudentAuth
+from app.api.deps import get_current_student, get_current_user, get_current_admin
+from app.db.Models import AdminUser, AdminRole, ProgrammeType, StudentAuth
 from app.db.session import get_db
 from app.main import app
 from app.services.project_service import ProjectService
@@ -39,25 +39,23 @@ def build_student() -> StudentAuth:
     )
 
 
-def build_faculty() -> Faculty:
-    return Faculty(
+def build_admin() -> AdminUser:
+    return AdminUser(
         id=uuid.uuid4(),
-        name="Dr. Guide",
-        email="guide@university.edu",
+        name="System Admin",
+        email="admin@university.edu",
         password_hash="hashed-password",
-        role=FacultyRole.FACULTY,
-        department="Computer Science",
+        role=AdminRole.ADMIN,
+        department="IT Services",
     )
 
 
-def build_project_response(student: StudentAuth, faculty: Faculty) -> SimpleNamespace:
+def build_project_response(student: StudentAuth) -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid.uuid4(),
         team_id="TEAM-2025-1234",
         leader_id=student.id,
-        guide_id=faculty.id,
         current_phase="PHASE_1",
-        guide_status="PENDING",
         academic_year="2025-26",
         semester=6,
         created_at=datetime.now(timezone.utc),
@@ -93,25 +91,7 @@ def test_auth_me_for_student(client: TestClient, student: StudentAuth) -> None:
     assert payload["enrollment_no"] == student.enrollment_no
 
 
-def test_student_cannot_approve_project(client: TestClient, student: StudentAuth) -> None:
-    with dependency_scope(
-        {
-            get_db: override_get_db,
-            get_current_faculty: lambda: (_ for _ in ()).throw(
-                HTTPException(status_code=403, detail="Faculty access required.")
-            ),
-        }
-    ):
-        response = client.patch(
-            f"/api/v1/projects/{uuid.uuid4()}/approve",
-            params={"status": GuideStatus.ACCEPTED.value},
-        )
-
-    assert response.status_code == 403, response.text
-    assert response.json()["detail"] == "Faculty access required."
-
-
-def test_faculty_cannot_create_project(client: TestClient, faculty: Faculty) -> None:
+def test_admin_cannot_create_project(client: TestClient, admin: AdminUser) -> None:
     with dependency_scope(
         {
             get_db: override_get_db,
@@ -123,7 +103,6 @@ def test_faculty_cannot_create_project(client: TestClient, faculty: Faculty) -> 
         response = client.post(
             "/api/v1/projects/",
             json={
-                "guide_id": str(faculty.id),
                 "academic_year": "2025-26",
                 "semester": 6,
                 "phase_1_data": {
@@ -143,9 +122,8 @@ def test_faculty_cannot_create_project(client: TestClient, faculty: Faculty) -> 
 def test_student_can_create_project(
     client: TestClient,
     student: StudentAuth,
-    faculty: Faculty,
 ) -> None:
-    project_response = build_project_response(student, faculty)
+    project_response = build_project_response(student)
 
     with dependency_scope(
         {
@@ -161,7 +139,6 @@ def test_student_can_create_project(
             response = client.post(
                 "/api/v1/projects/",
                 json={
-                    "guide_id": str(faculty.id),
                     "academic_year": "2025-26",
                     "semester": 6,
                     "phase_1_data": {
@@ -177,14 +154,13 @@ def test_student_can_create_project(
     assert response.status_code == 201, response.text
     payload = response.json()
     assert payload["leader_id"] == str(student.id)
-    assert payload["guide_id"] == str(faculty.id)
     assert payload["team_id"] == "TEAM-2025-1234"
     mocked_create.assert_awaited_once()
 
 
 def main() -> None:
     student = build_student()
-    faculty = build_faculty()
+    admin = build_admin()
 
     with TestClient(app) as client:
         print("Running manual auth route checks...")
@@ -192,13 +168,10 @@ def main() -> None:
         test_auth_me_for_student(client, student)
         print("PASS: GET /api/v1/auth/me returns the authenticated student profile")
 
-        test_student_cannot_approve_project(client, student)
-        print("PASS: Student is blocked from faculty-only approval route")
+        test_admin_cannot_create_project(client, admin)
+        print("PASS: Admin is blocked from student-only project submission route")
 
-        test_faculty_cannot_create_project(client, faculty)
-        print("PASS: Faculty is blocked from student-only project submission route")
-
-        test_student_can_create_project(client, student, faculty)
+        test_student_can_create_project(client, student)
         print("PASS: Student can create a project when authenticated")
 
         print("All manual auth route tests passed.")

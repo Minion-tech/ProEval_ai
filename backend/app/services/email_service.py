@@ -188,7 +188,7 @@ class EmailService:
 
                 <a href="http://localhost:3000/login" class="cta-button">Get Started</a>
 
-                <p>If you have any questions, feel free to reach out to your faculty guide.</p>
+                <p>If you have any questions, feel free to reach out to the platform administration.</p>
 
                 <p>Happy evaluating!<br>The ProEval AI Team</p>
             </div>

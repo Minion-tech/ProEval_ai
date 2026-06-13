@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Any
 from pydantic import BaseModel, Field
 from uuid import UUID
 from datetime import datetime
@@ -18,18 +18,23 @@ class Phase1DataSchema(BaseModel):
 class ProjectSubmissionCreateSchema(BaseModel):
     """Schema for creating a new project submission (Phase 1)."""
     phase_1_data: Phase1DataSchema
-    guide_id: UUID
     academic_year: str = Field(..., example="2025-26")
     semester: int = Field(..., ge=1, le=8)
+
+
+class ClarificationAnswersSchema(BaseModel):
+    """Answers to common Phase 1 clarification questions."""
+    answers: List[str] = Field(..., min_items=1)
 
 
 class Phase2DataSchema(BaseModel):
     """Schema for the mid-term progress review payload."""
 
     github_url: str = Field(..., min_length=10, description="Repository URL for the project")
-    architecture_diagram_url: Optional[str] = Field(
-        default=None,
-        description="URL to the latest architecture diagram or system design artifact",
+    presentation_url: str = Field(
+        ...,
+        min_length=10,
+        description="URL to the latest project presentation (PPT/PDF)",
     )
     progress_notes: str = Field(
         ...,
@@ -46,10 +51,6 @@ class Phase2DataSchema(BaseModel):
         default_factory=list,
         description="Known blockers, risks, or unresolved technical concerns",
     )
-    documentation_url: Optional[str] = Field(
-        default=None,
-        description="Optional link to supporting documentation",
-    )
 
 
 class Phase2SubmissionSchema(BaseModel):
@@ -59,12 +60,12 @@ class Phase2SubmissionSchema(BaseModel):
 
 class FinalDataSchema(BaseModel):
     """Schema for the final project submission payload."""
-    final_report_url: str = Field(..., min_length=10, description="URL to the final project report (PDF)")
-    presentation_url: str = Field(..., min_length=10, description="URL to the project presentation (PPT/PDF)")
+    final_report_url: str = Field(..., min_length=10, description="Uploaded final project report as a data URL or a public file link")
+    presentation_url: str = Field(..., min_length=10, description="Uploaded project presentation as a data URL or a public file link")
     demo_video_url: Optional[str] = Field(None, description="URL to the project demo video")
-    code_repository_url: str = Field(..., min_length=10, description="Final repository URL")
-    final_summary: str = Field(..., min_length=100, max_length=5000, description="Comprehensive summary of the project outcome")
-    individual_contributions: str = Field(..., min_length=50, description="Audit of what each member did")
+    github_url: str = Field(..., min_length=10, description="Final GitHub repository URL")
+    final_summary:Optional[str] = Field(None, min_length=100, max_length=5000, description="Comprehensive summary of the project outcome")
+    individual_contributions: Optional[str] = Field(None, min_length=50, description="Audit of what each member did")
 
 class FinalSubmissionSchema(BaseModel):
     """Schema for submitting the final project work."""
@@ -73,9 +74,12 @@ class FinalSubmissionSchema(BaseModel):
 class TeamJoinSchema(BaseModel):
     """Schema for a student to join an existing team."""
     team_id: str = Field(..., description="Human-readable team ID like TEAM-2025-1234")
-    role: str = Field(..., min_length=2, max_length=100, example="Frontend Developer")
-    functions: str = Field(..., min_length=10, description="What specific tasks will you handle?")
-    modules: str = Field(..., min_length=5, description="Which parts of the code will you work on?")
+    role: str = Field(..., min_length=2, example="Frontend Developer")
+    functions: str = Field(..., min_length=2, description="What specific tasks will you handle?")
+    modules: Optional[str] = Field(
+        None,
+        description="Modules or components this member will own",
+    )
     tech_stack: Optional[str] = Field(None, description="Skills/technologies the member brings")
     work_description: Optional[str] = Field(None, description="Detailed contribution plan")
 
@@ -86,7 +90,12 @@ class TeamMembershipResponseSchema(BaseModel):
     student_id: UUID
     role: str
     functions: str
-    modules: str
+    modules: Optional[str] = None
+    tech_stack: Optional[str] = None
+    work_description: Optional[str] = None
+    has_viewed_feedback: bool = False
+    message: Optional[str] = None
+    is_architect_triggered: bool = False
     created_at: datetime
 
     class Config:
@@ -98,12 +107,13 @@ class EvaluationResponseSchema(BaseModel):
 
     id: UUID
     submission_id: UUID
-    faculty_id: UUID
     phase: EvaluationPhase
     status: EvaluationStatus
     total_score: Optional[float] = None
     grade: Optional[str] = None
     ai_narrative: Optional[str] = None
+    agent_logs: Optional[Any] = None
+    roadmap_json: Optional[Any] = None
     created_at: datetime
     updated_at: datetime
 
@@ -116,11 +126,12 @@ class ProjectSubmissionResponseSchema(BaseModel):
     id: UUID
     team_id: str
     leader_id: UUID
-    guide_id: Optional[UUID] = None
     current_phase: str
-    guide_status: str
     academic_year: str
     semester: int
+    phase_1_data: Optional[dict] = None
+    phase_2_data: Optional[dict] = None
+    final_data: Optional[dict] = None
     created_at: datetime
 
     class Config:
@@ -133,7 +144,8 @@ class TeamMemberInfoSchema(BaseModel):
     email: str
     role: str
     functions: str
-    modules: str
+    modules: Optional[str] = None
+    tech_stack: Optional[str] = None
     is_leader: bool
 
 class MyProjectResponseSchema(BaseModel):
@@ -143,6 +155,8 @@ class MyProjectResponseSchema(BaseModel):
     member_count: int = 0
     members: List[TeamMemberInfoSchema] = []
     previous_projects: List[ProjectSubmissionResponseSchema] = []
+    latest_evaluation_status: Optional[str] = None
+    latest_evaluation_phase: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -173,4 +187,3 @@ class MyProposalsResponseSchema(BaseModel):
 
     class Config:
         from_attributes = True
-
