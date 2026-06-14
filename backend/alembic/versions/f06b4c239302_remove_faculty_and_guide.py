@@ -63,6 +63,9 @@ def upgrade() -> None:
         op.create_index(op.f('ix_admins_email'), 'admins', ['email'], unique=True)
 
     # 3. Create new notifications table
+    notificationtype = postgresql.ENUM('INVITATION_RECEIVED', 'FEEDBACK_RECEIVED', 'PROJECT_APPROVED', 'PROJECT_REJECTED', name='notificationtype')
+    notificationtype.create(op.get_bind(), checkfirst=True)
+
     op.create_table('notifications',
         sa.Column('id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
         sa.Column('admin_id', sa.UUID(), nullable=True),
