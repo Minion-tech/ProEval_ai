@@ -8,6 +8,7 @@ interface Links {
   label: string;
   href: string;
   icon: React.JSX.Element | React.ReactNode;
+  onClick?: () => void;
 }
 
 interface SidebarContextProps {
@@ -161,7 +162,7 @@ export const SidebarLink = ({
 }: {
   link: Links;
   className?: string;
-}) => {
+} & React.ComponentProps<"a">) => {
   const { open, animate } = useSidebar();
   return (
     <a

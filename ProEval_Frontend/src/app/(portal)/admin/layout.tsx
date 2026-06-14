@@ -88,7 +88,7 @@ export default function AdminLayout({
             {open ? <Logo /> : <LogoIcon />}
             <div className="mt-8 flex flex-col gap-2">
               {links.map((link, index) => (
-                <SidebarLink key={index} link={link} onClick={(link as { onClick?: () => void }).onClick} />
+                <SidebarLink key={index} link={link} onClick={link.onClick} />
               ))}
             </div>
           </div>
