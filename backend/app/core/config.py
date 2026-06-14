@@ -37,13 +37,20 @@ class Settings(BaseSettings):
         if not v:
             return v
         
-        # 1. Handle legacy 'postgres://' prefix (common in Heroku/older setups)
+        # 1. Handle legacy 'postgres://' prefix
         if v.startswith("postgres://"):
             v = v.replace("postgres://", "postgresql+asyncpg://", 1)
         
         # 2. Ensure asyncpg dialect is specified
-        if v.startswith("postgresql://"):
+        elif v.startswith("postgresql://"):
             v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        
+        # 3. asyncpg doesn't support 'sslmode' query parameter.
+        # We strip it here so settings.DATABASE_URL is always clean.
+        if "sslmode=" in v:
+            import re
+            v = re.sub(r"(\?|&)sslmode=[^&]*", "", v)
+            v = v.replace("?&", "?").rstrip("?").rstrip("&")
             
         return v
 
