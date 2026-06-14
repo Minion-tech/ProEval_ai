@@ -14,7 +14,7 @@ conf = ConnectionConfig(
     MAIL_STARTTLS=settings.MAIL_TLS,
     MAIL_SSL_TLS=settings.MAIL_SSL,
     USE_CREDENTIALS=True,
-    VALIDATE_CERTS=True,
+    VALIDATE_CERTS=False, # Set to False to prevent timeouts in some cloud environments
     TEMPLATE_FOLDER=None,
 )
 
