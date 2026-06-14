@@ -23,6 +23,7 @@ def upgrade() -> None:
     op.execute("DROP TABLE IF EXISTS notification CASCADE")
     op.execute("DROP TYPE IF EXISTS notificationtype CASCADE")
     op.execute("DROP TYPE IF EXISTS guidestatus CASCADE")
+    op.execute("DROP TYPE IF EXISTS adminrole CASCADE")
     
     # 2. Rename faculty table to admins (if it exists)
     # Check if table exists before renaming
