@@ -7,7 +7,7 @@
  *   3. Fill in all required proposal fields
  *   4. Submit the form  → backend triggers AI evaluation
  *   5. Assert redirect to /student/feedback
- *   6. Assert Phase 1 feedback section is visible and can be sent to guide
+ *   6. Assert Phase 1 feedback section is visible
  *
  * Prerequisites:
  *   • Backend running on http://localhost:8000
@@ -115,14 +115,6 @@ test.describe("Phase 1 AI Evaluation", () => {
       "Python\nFastAPI\nReact Native\nPostgreSQL\nYOLOv8\nOpenCV"
     );
 
-    // ── Guide selection ─────────────────────────────────────────────────────
-    // Wait for the dropdown to be populated (faculty loaded via API)
-    const guideTrigger = page.getByRole("combobox").first();
-    await guideTrigger.waitFor({ state: "visible", timeout: 10_000 });
-    await guideTrigger.click();
-    // Select first available guide
-    await page.getByRole("option").first().click();
-
     // Required in current form schema
     await page.setInputFiles("#useCaseDiagram", {
       name: "use-case-diagram.png",
@@ -154,7 +146,6 @@ test.describe("Phase 1 AI Evaluation", () => {
     const pendingState = page.getByText(/No evaluation data available yet|AI evaluation will trigger/i).first();
 
     await expect(scoreOutOfTen.or(pendingState)).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByRole("button", { name: /send to guide|sent to guide/i })).toBeVisible();
   });
 
   test("form validation: empty required fields prevent submission", async ({

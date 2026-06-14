@@ -10,6 +10,5 @@ export const PROJECT_STATUS = {
 
 export const ROLES = {
   STUDENT: 'STUDENT',
-  FACULTY: 'FACULTY',
   ADMIN: 'ADMIN',
 } as const;

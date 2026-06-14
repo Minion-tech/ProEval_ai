@@ -15,7 +15,6 @@ export const projectPhase1Schema = z.object({
   useCaseDiagram: z.string().min(20, "Use case diagram is required"),
   techStack: z.string().min(2, "Tech stack is required"),
   semester: z.string().min(1, "Semester is required"),
-  guide: z.string().min(2, "Guide selection is required"),
 });
 
 export const projectPhase2Schema = z.object({

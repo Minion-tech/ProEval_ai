@@ -8,12 +8,13 @@ import {
   ReactNode,
 } from "react";
 import { authService, RegisterRequest } from "@/lib/auth-service";
-
 export interface User {
   id: string;
   name: string;
   email: string;
-  role: "STUDENT" | "FACULTY" | "ADMIN";
+  role: "STUDENT" | "ADMIN";
+}
+
   department?: string;
   enrollment_no?: string;
   programme?: string;
