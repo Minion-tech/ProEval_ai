@@ -5,31 +5,8 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { adminService } from "@/lib/admin-service";
+import { adminService, type GuideProfile, type GuideProject } from "@/lib/admin-service";
 import { Loader2, ArrowLeft } from "lucide-react";
-
-interface StudentProjectUnderGuide {
-  semester: number;
-  academic_year: string;
-  team_id: string;
-  student_leader: string;
-  teammates: string[];
-  topic_name: string;
-  current_phase: string;
-  phase_1_submitted: boolean;
-  phase_2_submitted: boolean;
-  final_submitted: boolean;
-}
-
-interface GuideProfile {
-  id: string;
-  name: string;
-  email: string;
-  department: string | null | undefined;
-  specialization: string | null | undefined;
-  is_active: boolean;
-  projects: StudentProjectUnderGuide[];
-}
 
 export default function GuideProfilePage({
   params,
@@ -39,6 +16,7 @@ export default function GuideProfilePage({
   const resolvedParams = use(params);
   const guideId = resolvedParams.guideId;
   const [data, setData] = useState<GuideProfile | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
