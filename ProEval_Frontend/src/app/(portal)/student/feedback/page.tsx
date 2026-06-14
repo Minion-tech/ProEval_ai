@@ -138,7 +138,7 @@ export default function StudentFeedbackPage() {
   // Mark feedback as viewed when this page is opened
   useEffect(() => {
     if (project?.id && !isLeader) {
-      const me = projectData?.members?.find(m => m.email === user?.email);
+      const me = projectData?.members?.find((m: any) => m.email === user?.email);
       if (me && !me.has_viewed_feedback) {
         projectService.markFeedbackViewed(project.id, { testMode: isTestUser })
           .catch(err => console.error("Failed to mark feedback viewed:", err));
@@ -175,7 +175,7 @@ export default function StudentFeedbackPage() {
                 Submit your {phaseLabel} proposal to receive AI mentorship feedback.
               </p>
             </div>
-            <Button variant="outline" size="sm" onClick={fetchEvaluations}>
+            <Button variant="outline" size="sm" onClick={() => fetchEvaluations()}>
               <RefreshCw className="mr-2 h-4 w-4" /> Refresh
             </Button>
           </CardContent>
@@ -196,7 +196,7 @@ export default function StudentFeedbackPage() {
                 This usually takes 30–60 seconds. Click refresh to check.
               </p>
             </div>
-            <Button variant="outline" size="sm" onClick={fetchEvaluations}>
+            <Button variant="outline" size="sm" onClick={() => fetchEvaluations()}>
               <RefreshCw className="mr-2 h-4 w-4" /> Refresh
             </Button>
           </CardContent>
@@ -626,7 +626,7 @@ export default function StudentFeedbackPage() {
                     <h3 className="text-base font-black">Clarification Feedback</h3>
                   </div>
                   <div className="space-y-3">
-                    {parsed.clarificationAnswers.map((answer, idx) => (
+                    {parsed.clarificationAnswers.map((answer: string, idx: number) => (
                       <div key={idx} className="rounded-3xl bg-slate-50 p-4 text-sm text-slate-700">
                         <span className="block text-xs uppercase tracking-[0.2em] text-slate-500 mb-2">Answer {idx + 1}</span>
                         <p>{answer}</p>

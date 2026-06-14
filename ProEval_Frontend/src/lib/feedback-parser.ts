@@ -104,6 +104,8 @@ export function parseAiNarrative(text: string): ParsedFeedback {
       concerns: [],
       roadmap: [],
       clarificationAnswers: [],
+      ideatorReview: "",
+      architectReview: "",
       raw: ""
     };
   }

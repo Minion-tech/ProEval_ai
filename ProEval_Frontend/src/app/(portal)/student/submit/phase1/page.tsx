@@ -12,6 +12,7 @@ import { ArrowLeft, Loader2, Sparkles, HelpCircle, CheckCircle2, ChevronRight, C
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { isTestUserEmail } from "@/lib/portal-mode";
+import { TEST_SCENARIOS } from "@/constants/scenarios";
 
 export default function Phase1Submission() {
   const router = useRouter();

@@ -28,6 +28,8 @@ export const InterviewRoom: React.FC<InterviewRoomProps> = ({ submissionId, onCo
     initial_questions: string[];
     student_name?: string;
     student_role?: string;
+    phase1_title?: string;
+    project_summary?: string;
   } | null>(null);
 
   const fetchContext = useCallback(async () => {

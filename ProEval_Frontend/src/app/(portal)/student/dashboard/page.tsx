@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { projectService, type MyProjectResponse } from "@/lib/project-service";
 import { isTestUserEmail } from "@/lib/portal-mode";
-import { AlertTriangle, ArrowRight, Loader2, Mic, RefreshCw, Sparkles, Trash2, Users } from "lucide-react";
+import { AlertTriangle, ArrowRight, HelpCircle, Loader2, Mic, RefreshCw, Sparkles, Trash2, Users } from "lucide-react";
+import { toast } from "sonner";
 
 interface Proposal {
   id: string;

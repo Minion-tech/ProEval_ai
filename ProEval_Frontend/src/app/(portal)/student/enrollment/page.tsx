@@ -108,7 +108,15 @@ export default function StudentEnrollmentPage() {
                 } else if (projectData.project.current_phase === "FINAL" || projectData.project.current_phase === "SUBMITTED") {
                     setCurrentPhase(3);
                     if (projectData.project.final_data) {
-                        setFinalData(projectData.project.final_data);
+                        const fd = projectData.project.final_data;
+                        setFinalData({
+                            final_report_url: fd.final_report_url || "",
+                            presentation_url: fd.presentation_url || "",
+                            demo_video_url: fd.demo_video_url || "",
+                            github_url: fd.github_url || "",
+                            final_summary: fd.final_summary || "",
+                            individual_contributions: fd.individual_contributions || ""
+                        });
                     }
                 }
             }
