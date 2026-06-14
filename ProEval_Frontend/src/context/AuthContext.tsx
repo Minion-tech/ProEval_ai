@@ -13,8 +13,6 @@ export interface User {
   name: string;
   email: string;
   role: "STUDENT" | "ADMIN";
-}
-
   department?: string;
   enrollment_no?: string;
   programme?: string;
