@@ -25,8 +25,8 @@ interface GuideProfile {
   id: string;
   name: string;
   email: string;
-  department: string;
-  specialization: string;
+  department: string | null | undefined;
+  specialization: string | null | undefined;
   is_active: boolean;
   projects: StudentProjectUnderGuide[];
 }
