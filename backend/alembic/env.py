@@ -28,9 +28,16 @@ target_metadata = Base.metadata
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
-    # We use settings.DATABASE_URL directly to avoid '%' interpolation errors
+    url = settings.DATABASE_URL
+    
+    # asyncpg doesn't support 'sslmode' in the connection string.
+    if "postgresql+asyncpg" in url and "sslmode=" in url:
+        import re
+        url = re.sub(r"(\?|&)sslmode=[^&]*", "", url)
+        url = url.replace("?&", "?").rstrip("?").rstrip("&")
+
     context.configure(
-        url=settings.DATABASE_URL,
+        url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -49,12 +56,28 @@ def do_run_migrations(connection: Connection) -> None:
 
 async def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
+    url = settings.DATABASE_URL
+    connect_args = {}
+    
+    # asyncpg doesn't support 'sslmode' in the connection string.
+    if "postgresql+asyncpg" in url and "sslmode=" in url:
+        import re
+        # If sslmode is require or similar, we enable SSL in connect_args
+        if "sslmode=require" in url or "sslmode=verify-full" in url or "sslmode=verify-ca" in url:
+            connect_args["ssl"] = True
+        
+        # Strip sslmode from the URL query string
+        url = re.sub(r"(\?|&)sslmode=[^&]*", "", url)
+        # Clean up potential trailing '?' or '&'
+        url = url.replace("?&", "?").rstrip("?").rstrip("&")
+
     # We pass the URL directly to async_engine_from_config to avoid '%' interpolation errors
     connectable = async_engine_from_config(
         config.get_section(config.config_ini_section, {}),
-        url=settings.DATABASE_URL,
+        url=url,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args=connect_args
     )
 
     async with connectable.connect() as connection:

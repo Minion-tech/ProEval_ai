@@ -9,11 +9,27 @@ def get_engine():
     """Lazy initialization of async engine to avoid event loop issues at import time"""
     global engine
     if engine is None:
+        url = settings.DATABASE_URL
+        connect_args = {"timeout": 10}
+        
+        # asyncpg doesn't support 'sslmode' in the connection string.
+        # This commonly happens when using hosted DBs like Neon, Supabase, or AWS.
+        if "postgresql+asyncpg" in url and "sslmode=" in url:
+            import re
+            # If sslmode is require or similar, we enable SSL in connect_args
+            if "sslmode=require" in url or "sslmode=verify-full" in url or "sslmode=verify-ca" in url:
+                connect_args["ssl"] = True
+            
+            # Strip sslmode from the URL query string
+            url = re.sub(r"(\?|&)sslmode=[^&]*", "", url)
+            # Clean up potential trailing '?' or '&'
+            url = url.replace("?&", "?").rstrip("?").rstrip("&")
+
         engine = create_async_engine(
-            settings.DATABASE_URL,
+            url,
             echo=settings.DEBUG,
             future=True,
-            connect_args={"timeout": 10}
+            connect_args=connect_args
         )
     return engine
 
