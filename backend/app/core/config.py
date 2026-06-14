@@ -108,13 +108,21 @@ class Settings(BaseSettings):
     OTP_ENABLED: bool = True
     MAIL_USERNAME: str = ""
     MAIL_PASSWORD: str = ""
-    MAIL_FROM: str = "noreply@proeval.ai"
+    MAIL_FROM: str = "" # Defaults to MAIL_USERNAME in validator
     MAIL_PORT: int = 587
     MAIL_SERVER: str = "smtp.gmail.com"
     MAIL_FROM_NAME: str = "ProEval AI"
     MAIL_TLS: bool = True
     MAIL_SSL: bool = False
     MAIL_DEBUG: int = 0
+
+    @field_validator("MAIL_FROM", mode="before")
+    @classmethod
+    def validate_mail_from(cls, v: str, info) -> str:
+        if v:
+            return v
+        # Fallback to MAIL_USERNAME if not provided (common for Gmail)
+        return info.data.get("MAIL_USERNAME", "noreply@proeval.ai")
 
     model_config = SettingsConfigDict(
         case_sensitive=True,

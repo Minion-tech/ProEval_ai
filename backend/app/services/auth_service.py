@@ -107,12 +107,14 @@ class AuthService:
             try:
                 await EmailService.send_otp_email(data.email, otp_code)
             except Exception as e:
+                # Log the real error to the server console for debugging
+                print(f"CRITICAL: OTP Email failed for {data.email}. Error: {str(e)}")
                 # If email fails, cleanup and re-raise
                 if data.email in otp_store:
                     del otp_store[data.email]
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Failed to send verification email. Please try again."
+                    detail=f"Failed to send verification email: {str(e)}" if settings.DEBUG else "Failed to send verification email. Please try again."
                 )
             return f"A verification code has been sent to {data.email}"
 
