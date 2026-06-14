@@ -14,8 +14,8 @@ conf = ConnectionConfig(
     MAIL_STARTTLS=settings.MAIL_TLS,
     MAIL_SSL_TLS=settings.MAIL_SSL,
     USE_CREDENTIALS=True,
-    VALIDATE_CERTS=False, # Set to False to prevent timeouts in some cloud environments
-    TEMPLATE_FOLDER=None,
+    VALIDATE_CERTS=False,
+    TIMEOUT=60, # Increased timeout for slow cloud connections
 )
 
 class EmailService:
