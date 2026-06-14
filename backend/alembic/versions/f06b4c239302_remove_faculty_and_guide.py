@@ -25,12 +25,17 @@ def upgrade() -> None:
     op.execute("DROP TYPE IF EXISTS guidestatus CASCADE")
     op.execute("DROP TYPE IF EXISTS adminrole CASCADE")
     
-    # 2. Rename faculty table to admins (if it exists)
-    # Check if table exists before renaming
+    # 2. Rename faculty table to admins (if it exists) or create admins
     conn = op.get_bind()
-    res = conn.execute(sa.text("SELECT count(*) FROM information_schema.tables WHERE table_name = 'faculty'"))
-    if res.scalar() > 0:
+    res_faculty = conn.execute(sa.text("SELECT count(*) FROM information_schema.tables WHERE table_name = 'faculty'"))
+    res_admins = conn.execute(sa.text("SELECT count(*) FROM information_schema.tables WHERE table_name = 'admins'"))
+    
+    faculty_exists = res_faculty.scalar() > 0
+    admins_exists = res_admins.scalar() > 0
+
+    if faculty_exists:
         op.rename_table('faculty', 'admins')
+        # ... (rest of rename logic) ...
         op.execute("DROP INDEX IF EXISTS ix_faculty_email")
         op.create_index(op.f('ix_admins_email'), 'admins', ['email'], unique=True)
         
@@ -46,8 +51,8 @@ def upgrade() -> None:
         
         op.execute("UPDATE admins SET role = 'ADMIN'")
         op.execute("ALTER TABLE admins ALTER COLUMN role TYPE adminrole USING role::adminrole")
-    else:
-        # Create admins table if it doesn't exist
+    elif not admins_exists:
+        # Create admins table only if it doesn't exist
         op.create_table('admins',
             sa.Column('name', sa.String(length=255), nullable=False),
             sa.Column('email', sa.String(length=255), nullable=False),
