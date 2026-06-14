@@ -1,6 +1,0 @@
-{
-  "buildCommand": "cd ProEval_Frontend && npm run build",
-  "installCommand": "cd ProEval_Frontend && npm ci --legacy-peer-deps",
-  "outputDirectory": "ProEval_Frontend/.next",
-  "framework": "nextjs"
-}
