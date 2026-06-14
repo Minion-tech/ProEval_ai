@@ -8,7 +8,7 @@ class StudentRegister(BaseModel):
     name: str = Field(..., min_length=2, max_length=255)
     email: EmailStr
     enrollment_no: str = Field(..., min_length=2, max_length=50)
-    password: str = Field(..., min_length=8)
+    password: str = Field(..., min_length=6)
     programme: str = Field(..., min_length=2, max_length=50)
     department: str = Field(..., min_length=2, max_length=255)
     batch: str = Field(..., example="2024-2028")
@@ -21,7 +21,7 @@ class OTPVerify(BaseModel):
 class LoginRequest(BaseModel):
     """Schema for the shared student/admin login request."""
     email: EmailStr
-    password: str = Field(..., min_length=8)
+    password: str = Field(..., min_length=6)
 
 class Token(BaseModel):
     """Schema for the JWT response."""

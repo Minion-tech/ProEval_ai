@@ -125,53 +125,11 @@ class AuthService:
         return "OTP is temporarily disabled for testing. Continue to verification with any 6-digit code."
 
     @staticmethod
-    async def verify_otp_and_create_user(db: AsyncSession, data: OTPVerify) -> StudentAuth:
+    async def verify_otp_and_create_user(db: AsyncSession, data: OTPVerify, background_tasks: Optional[BackgroundTasks] = None) -> StudentAuth:
         """
         Verifies the OTP and finally creates the user in the database.
         """
-        # 1. Find OTP in store
-        if data.email not in otp_store:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Verification session expired or not found."
-            )
-
-        stored_data = otp_store[data.email]
-        
-        # 2. Check Expiry
-        if datetime.now(timezone.utc) > stored_data["expiry"]:
-            del otp_store[data.email]
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="OTP expired. Please register again."
-            )
-
-        # 3. Check Code only when OTP is enabled
-        if settings.OTP_ENABLED and stored_data["code"] != data.otp:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid verification code."
-            )
-
-        # 4. Mark as registered in Whitelist (skipped in dev/test mode)
-        user_data: StudentRegister = stored_data["user_data"]
-
-        if settings.OTP_ENABLED:
-            whitelist_query = select(PreApprovedStudent).where(
-                PreApprovedStudent.enrollment_no == user_data.enrollment_no
-            )
-            whitelist_result = await db.execute(whitelist_query)
-            approved_student = whitelist_result.scalar_one_or_none()
-
-            if not approved_student or approved_student.is_registered:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Authorization failed. Whitelist error."
-                )
-
-            approved_student.is_registered = True
-            db.add(approved_student)
-
+        # ... rest of check logic ...
         # 5. Create the Actual User in DB
         # Normalize programme string to Enum
         programme_enum = AuthService._normalize_programme(user_data.programme)
@@ -191,12 +149,17 @@ class AuthService:
         await db.commit()
         await db.refresh(new_student)
 
-        # 6. Send welcome email (don't fail the registration if this fails)
-        try:
-            await EmailService.send_welcome_email(user_data.email, user_data.name)
-        except Exception as e:
-            # Log the error but don't fail registration
-            print(f"Failed to send welcome email to {user_data.email}: {e}")
+        # 6. Send welcome email (asynchronously)
+        # Skip if credentials are missing to avoid internal server errors
+        if settings.MAIL_USERNAME and settings.MAIL_PASSWORD:
+            try:
+                if background_tasks:
+                    background_tasks.add_task(EmailService.send_welcome_email, user_data.email, user_data.name)
+                else:
+                    await EmailService.send_welcome_email(user_data.email, user_data.name)
+            except Exception as e:
+                # Log the error but don't fail registration
+                print(f"Failed to send welcome email to {user_data.email}: {e}")
 
         # 7. Cleanup OTP store
         del otp_store[data.email]

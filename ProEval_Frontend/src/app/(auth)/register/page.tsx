@@ -131,17 +131,17 @@ const Page = () => {
                       value={formData.password} 
                       onChange={handleChange} 
                       required 
-                      className={formData.password.length > 0 && formData.password.length < 8 ? "border-red-500" : ""}
+                      className={formData.password.length > 0 && formData.password.length < 6 ? "border-red-500" : ""}
                     />
-                    <p className={`text-[10px] mt-1 ${formData.password.length >= 8 ? "text-green-600" : "text-gray-500"}`}>
-                      {formData.password.length} / 8 characters minimum
+                    <p className={`text-[10px] mt-1 ${formData.password.length >= 6 ? "text-green-600" : "text-gray-500"}`}>
+                      {formData.password.length} / 6 characters minimum
                     </p>
                   </div>
 
                   <Button 
                     className="w-full" 
                     type="submit" 
-                    disabled={loading || formData.password.length < 8}
+                    disabled={loading || formData.password.length < 6}
                   >
                     {loading ? 'Sending OTP...' : 'Register'}
                   </Button>

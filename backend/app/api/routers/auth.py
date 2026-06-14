@@ -40,12 +40,13 @@ async def register_student(
 @router.post("/verify", response_model=Token)
 async def verify_otp(
     data: OTPVerify,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
     Verifies OTP and creates the student account. Returns initial access token.
     """
-    user = await AuthService.verify_otp_and_create_user(db, data)
+    user = await AuthService.verify_otp_and_create_user(db, data, background_tasks)
     
     # Auto-login after verification
     access_token = create_access_token(subject=user.id)
