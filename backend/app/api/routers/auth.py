@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any
 
@@ -28,12 +28,13 @@ async def register_options():
 @router.post("/register", status_code=status.HTTP_200_OK)
 async def register_student(
     data: StudentRegister,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
-    Initial registration: Validates data and sends a verification code.
+    Initial registration: Validates data and sends a verification code in the background.
     """
-    message = await AuthService.register_student(db, data)
+    message = await AuthService.register_student(db, data, background_tasks)
     return {"message": message}
 
 @router.post("/verify", response_model=Token)
