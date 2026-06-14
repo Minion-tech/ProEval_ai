@@ -124,6 +124,26 @@ class Settings(BaseSettings):
         # Fallback to MAIL_USERNAME if not provided (common for Gmail)
         return info.data.get("MAIL_USERNAME", "noreply@proeval.ai")
 
+    @field_validator("MAIL_TLS", mode="before")
+    @classmethod
+    def set_mail_tls(cls, v: bool, info) -> bool:
+        port = info.data.get("MAIL_PORT")
+        if port == 465:
+            return False
+        if port == 587:
+            return True
+        return v
+
+    @field_validator("MAIL_SSL", mode="before")
+    @classmethod
+    def set_mail_ssl(cls, v: bool, info) -> bool:
+        port = info.data.get("MAIL_PORT")
+        if port == 465:
+            return True
+        if port == 587:
+            return False
+        return v
+
     model_config = SettingsConfigDict(
         case_sensitive=True,
         env_file=".env",
