@@ -129,7 +129,49 @@ class AuthService:
         """
         Verifies the OTP and finally creates the user in the database.
         """
-        # ... rest of check logic ...
+        # 1. Find OTP in store
+        if data.email not in otp_store:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Verification session expired or not found."
+            )
+
+        stored_data = otp_store[data.email]
+        
+        # 2. Check Expiry
+        if datetime.now(timezone.utc) > stored_data["expiry"]:
+            del otp_store[data.email]
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="OTP expired. Please register again."
+            )
+
+        # 3. Check Code only when OTP is enabled
+        if settings.OTP_ENABLED and stored_data["code"] != data.otp:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid verification code."
+            )
+
+        # 4. Mark as registered in Whitelist (skipped in dev/test mode)
+        user_data: StudentRegister = stored_data["user_data"]
+
+        if settings.OTP_ENABLED:
+            whitelist_query = select(PreApprovedStudent).where(
+                PreApprovedStudent.enrollment_no == user_data.enrollment_no
+            )
+            whitelist_result = await db.execute(whitelist_query)
+            approved_student = whitelist_result.scalar_one_or_none()
+
+            if not approved_student or approved_student.is_registered:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Authorization failed. Whitelist error."
+                )
+
+            approved_student.is_registered = True
+            db.add(approved_student)
+
         # 5. Create the Actual User in DB
         # Normalize programme string to Enum
         programme_enum = AuthService._normalize_programme(user_data.programme)
