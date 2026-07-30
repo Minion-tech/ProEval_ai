@@ -2,7 +2,8 @@
 
 ProEval AI is an AI-assisted academic project evaluation platform for managing student project lifecycles, automated mentorship feedback, plagiarism and ownership risk signals, and technical viva preparation. It is designed for institutions that need a structured workflow from initial proposal submission through mid-term progress review and final project audit.
 
-The system combines a Next.js student/admin portal with a FastAPI backend, PostgreSQL persistence, Redis/Celery background processing, and multi-agent AI evaluation services.
+The system combines a Next.js student/admin portal with a FastAPI backend, PostgreSQL persistence, Redis/Celery background processing, and multi-agent AI evaluation services. 
+Deployed link: pro-eval-ai.vercel.app
 
 ## Key Features
 
