@@ -351,9 +351,6 @@ Check:
 4. Include screenshots or API examples for user-facing changes.
 5. Add or update tests when changing shared behavior, authentication, evaluation logic, or data contracts.
 
-## License
-
-No license file is currently included. Add a license before distributing or using this project commercially.
 
 ## Maintainers
 
