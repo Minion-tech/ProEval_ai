@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ProEval AI | Student Project Evaluation Platform",
+  title: "ProEval AI",
   description: "Advanced AI-powered student project evaluation and progress tracking system.",
 };
 

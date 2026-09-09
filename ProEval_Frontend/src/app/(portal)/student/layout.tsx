@@ -3,16 +3,13 @@
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import {
   IconArrowLeft,
-  IconBrandTabler,
   IconSettings,
   IconUserBolt,
   IconLayoutDashboard,
-  IconClipboardList,
   IconUsers,
   IconMessageCircle,
 } from "@tabler/icons-react";
 import { useState, useEffect } from "react";
-import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { useAuth } from "@/context/AuthContext";
@@ -35,51 +32,41 @@ export default function StudentLayout({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-foreground" />
       </div>
     );
   }
 
   if (!isAuthenticated) {
-    return null; // Will redirect via useEffect
+    return null;
   }
 
   const links = [
     {
-      label: "Dashboard",
+      label: "Home & Workflow",
       href: "/student/dashboard",
-      icon: (
-        <IconLayoutDashboard className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-      ),
+      icon: <IconLayoutDashboard className="h-5 w-5 shrink-0 text-muted-foreground" />,
     },
     {
-      label: "Team",
+      label: "My Team & Project",
       href: "/student/team",
-      icon: (
-        <IconUsers className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-      ),
+      icon: <IconUsers className="h-5 w-5 shrink-0 text-muted-foreground" />,
     },
     {
-      label: "Feedback",
+      label: "AI Feedback & Guidance",
       href: "/student/feedback",
-      icon: (
-        <IconMessageCircle className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-      ),
+      icon: <IconMessageCircle className="h-5 w-5 shrink-0 text-muted-foreground" />,
     },
     {
-      label: "Profile",
+      label: "My Profile",
       href: "/student/profile",
-      icon: (
-        <IconUserBolt className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-      ),
+      icon: <IconUserBolt className="h-5 w-5 shrink-0 text-muted-foreground" />,
     },
     {
       label: "Settings",
       href: "/student/settings",
-      icon: (
-        <IconSettings className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-      ),
+      icon: <IconSettings className="h-5 w-5 shrink-0 text-muted-foreground" />,
     },
     {
       label: "Logout",
@@ -88,9 +75,7 @@ export default function StudentLayout({
         logout();
         router.push("/login");
       },
-      icon: (
-        <IconArrowLeft className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-      ),
+      icon: <IconArrowLeft className="h-5 w-5 shrink-0 text-muted-foreground" />,
     },
   ];
 
@@ -104,33 +89,24 @@ export default function StudentLayout({
     : "U";
 
   return (
-    <div
-      className={cn(
-        "rounded-md flex flex-col md:flex-row bg-gray-100 dark:bg-neutral-800 w-full flex-1 max-w-full mx-auto border border-neutral-200 dark:border-neutral-700",
-        "h-screen"
-      )}
-    >
+    <div className="flex h-screen w-full bg-background">
       <Sidebar open={open} setOpen={setOpen}>
         <SidebarBody className="justify-between gap-10">
-          <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
             {open ? <Logo /> : <LogoIcon />}
-            <div className="mt-8 flex flex-col gap-2">
+            <div className="mt-8 flex flex-col gap-1.5">
               {links.map((link, idx) => (
-                <SidebarLink 
-                  key={idx} 
-                  link={link} 
-                  onClick={link.onClick}
-                />
+                <SidebarLink key={idx} link={link} onClick={link.onClick} />
               ))}
             </div>
           </div>
-          <div>
+          <div className="border-t border-border pt-4">
             <SidebarLink
               link={{
                 label: user?.name || "User",
                 href: "/student/profile",
                 icon: (
-                  <div className="h-7 w-7 flex-shrink-0 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-foreground text-xs font-medium text-background">
                     {userInitials}
                   </div>
                 ),
@@ -139,7 +115,7 @@ export default function StudentLayout({
           </div>
         </SidebarBody>
       </Sidebar>
-      <div className="flex-1 overflow-y-auto bg-white dark:bg-neutral-900">
+      <div className="flex-1 overflow-y-auto bg-muted/10">
         {children}
       </div>
     </div>
@@ -148,17 +124,14 @@ export default function StudentLayout({
 
 const Logo = () => {
   return (
-    <Link
-      href="/"
-      className="font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20"
-    >
-      <div className="h-5 w-6 bg-black dark:bg-white rounded-br-lg rounded-tr-sm rounded-tl-lg rounded-bl-sm flex-shrink-0" />
+    <Link href="/" className="flex items-center gap-2 py-1 text-sm text-foreground">
+      <div className="h-5 w-6 shrink-0 rounded-br-lg rounded-tl-lg bg-foreground" />
       <motion.span
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="font-medium text-black dark:text-white whitespace-pre"
+        className="whitespace-pre text-sm font-semibold tracking-tight text-foreground"
       >
-        ProEval AI
+        ProEval
       </motion.span>
     </Link>
   );
@@ -166,11 +139,8 @@ const Logo = () => {
 
 const LogoIcon = () => {
   return (
-    <Link
-      href="/"
-      className="font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20"
-    >
-      <div className="h-5 w-6 bg-black dark:bg-white rounded-br-lg rounded-tr-sm rounded-tl-lg rounded-bl-sm flex-shrink-0" />
+    <Link href="/" className="flex items-center gap-2 py-1 text-sm text-foreground">
+      <div className="h-5 w-6 shrink-0 rounded-br-lg rounded-tl-lg bg-foreground" />
     </Link>
   );
-}
+};

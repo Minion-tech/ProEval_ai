@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import TestUserWorkspace from "@/components/test-user/TestUserWorkspace";
+import { StudentJourneyBanner } from "@/components/common/StudentJourneyBanner";
 import { useAuth } from "@/context/AuthContext";
 import { projectService } from "@/lib/project-service";
 import { isTestUserEmail } from "@/lib/portal-mode";
-import { Eye, Loader2, Plus, UserPlus, Users } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 
 export default function StudentTeamPage() {
   const router = useRouter();
@@ -28,7 +29,6 @@ export default function StudentTeamPage() {
         const response = await projectService.getMyProject({ testMode: false });
         if (response.data?.project) {
           router.replace("/student/my-team");
-          // Keep loading true while redirecting to avoid flashing the initial UI
           return;
         }
       } catch (err) {
@@ -42,137 +42,126 @@ export default function StudentTeamPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (isTestUser) {
     return (
-      <main className="container mx-auto max-w-7xl px-4 py-12">
+      <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
         <TestUserWorkspace />
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold text-gray-900">Team Management</h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Start your project evaluation journey here. Choose whether you want to lead a new team or join an existing one.
+    <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8 md:py-12">
+      <div className="space-y-10 md:space-y-12">
+        <StudentJourneyBanner currentPhase="NO_TEAM" hasTeam={false} />
+
+        <div className="space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Step 01 — Team Setup
+          </p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+            Team Setup
+          </h1>
+          <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground md:text-base">
+            Work in teams of 1–3. Create a new team as leader or join an existing team with a Team ID.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 mt-12">
-          <Card className="relative overflow-hidden border-2 hover:border-blue-300 transition-colors">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-blue-100 rounded-bl-full"></div>
-            <CardHeader className="pb-4">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Plus className="h-6 w-6 text-blue-600" />
-                </div>
-                <CardTitle className="text-xl">Create New Team</CardTitle>
-              </div>
-              <CardDescription className="text-base">
-                Start a new project team as the leader, submit Phase 1, and invite members to join later with the generated team ID.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-center space-x-2">
-                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                  <span>Submit the Phase 1 proposal as team leader</span>
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card className="flex flex-col border border-border bg-card">
+            <div className="space-y-4 p-6 md:p-7">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Leader path
+              </p>
+              <h2 className="text-xl font-semibold tracking-tight text-foreground">Create a new team</h2>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Start a new project, submit the Phase 1 proposal and receive a Team ID to invite teammates.
+              </p>
+              <ul className="space-y-2 pt-2 text-sm text-muted-foreground">
+                <li className="flex gap-2.5">
+                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-foreground" />
+                  <span>Complete Phase 1 proposal — title, abstract and tech stack</span>
                 </li>
-                <li className="flex items-center space-x-2">
-                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                  <span>Share the generated Team ID with your members</span>
+                <li className="flex gap-2.5">
+                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-foreground" />
+                  <span>Receive a Team ID to share</span>
                 </li>
-                <li className="flex items-center space-x-2">
-                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                  <span>Continue through Phase 2 and Final when feedback unlocks them</span>
+                <li className="flex gap-2.5">
+                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-foreground" />
+                  <span>Continue through Phase 2 and Final as leader</span>
                 </li>
               </ul>
-              <Link href="/student/enrollment" className="block">
-                <Button className="w-full" size="lg">
-                  <Users className="mr-2 h-4 w-4" />
+            </div>
+            <div className="mt-auto border-t border-border p-6 md:p-7">
+              <Button asChild className="group w-full bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
+                <Link href="/student/enrollment" className="inline-flex items-center justify-center gap-1.5">
                   Create Team
-                </Button>
-              </Link>
-            </CardContent>
+                  <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+                </Link>
+              </Button>
+            </div>
           </Card>
 
-          <Card className="relative overflow-hidden border-2 hover:border-green-300 transition-colors">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-green-100 rounded-bl-full"></div>
-            <CardHeader className="pb-4">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <UserPlus className="h-6 w-6 text-green-600" />
-                </div>
-                <CardTitle className="text-xl">Join Existing Team</CardTitle>
-              </div>
-              <CardDescription className="text-base">
-                Join a team created by your leader, contribute under your own login, and see the same shared project feedback as the rest of the group.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-center space-x-2">
-                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                  <span>Enter the Team ID shared by your leader</span>
+          <Card className="flex flex-col border border-border bg-card">
+            <div className="space-y-4 p-6 md:p-7">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Member path
+              </p>
+              <h2 className="text-xl font-semibold tracking-tight text-foreground">Join an existing team</h2>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Join a team created by a classmate. Enter the Team ID and record your role.
+              </p>
+              <ul className="space-y-2 pt-2 text-sm text-muted-foreground">
+                <li className="flex gap-2.5">
+                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-foreground" />
+                  <span>Obtain the Team ID from your leader</span>
                 </li>
-                <li className="flex items-center space-x-2">
-                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                  <span>Describe your role, modules, and contribution plan</span>
+                <li className="flex gap-2.5">
+                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-foreground" />
+                  <span>Specify role, modules and responsibilities</span>
                 </li>
-                <li className="flex items-center space-x-2">
-                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                  <span>View ideator and architect feedback together with your team</span>
+                <li className="flex gap-2.5">
+                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-foreground" />
+                  <span>Access shared feedback and prepare for Viva</span>
                 </li>
               </ul>
-              <Link href="/student/team/join" className="block">
-                <Button variant="outline" className="w-full" size="lg">
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Join Team
-                </Button>
-              </Link>
-            </CardContent>
+            </div>
+            <div className="mt-auto border-t border-border p-6 md:p-7">
+              <Button asChild variant="outline" className="group w-full border-border font-medium">
+                <Link href="/student/team/join" className="inline-flex items-center justify-center gap-1.5">
+                  Join with Team ID
+                  <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+                </Link>
+              </Button>
+            </div>
           </Card>
         </div>
 
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle className="text-lg">Important Notes</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-gray-600">
-            <p><strong>Team Leader:</strong> creates the team and submits Phase 1, Phase 2, and Final payloads.</p>
-            <p><strong>Team Members:</strong> join with the Team ID, contribute under their own accounts, and can see the shared feedback trail.</p>
-            <p><strong>Team Size:</strong> up to 3 members total.</p>
-            <p><strong>Shared Feedback:</strong> ideator feedback appears after Phase 1, and architect feedback appears when the team is fully formed.</p>
-          </CardContent>
-        </Card>
-
-        <Card className="mt-8 border-purple-200 bg-purple-50">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center">
-              <Eye className="mr-2 h-5 w-5 text-purple-600" />
-              Already Part of a Team?
-            </CardTitle>
-            <CardDescription>
-              If you already created or joined a team, continue from your shared team space.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link href="/student/my-team">
-              <Button variant="outline" className="border-purple-300 text-purple-700 hover:bg-purple-100">
-                <Eye className="mr-2 h-4 w-4" />
-                View My Team
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+        <section className="rounded-xl border border-border bg-muted/30 px-6 py-6 md:px-7">
+          <h3 className="text-sm font-semibold text-foreground">Notes</h3>
+          <dl className="mt-4 space-y-3 text-sm leading-relaxed">
+            <div>
+              <dt className="font-medium text-foreground">Team ID</dt>
+              <dd className="text-muted-foreground">
+                A short identifier generated when a leader creates a team, e.g. <span className="font-mono text-xs text-foreground">TEAM-2026-X89K</span>.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium text-foreground">Working alone</dt>
+              <dd className="text-muted-foreground">A leader may work solo and complete all phases as a team of one.</dd>
+            </div>
+            <div>
+              <dt className="font-medium text-foreground">Changing teams</dt>
+              <dd className="text-muted-foreground">View roster and feedback anytime under My Team.</dd>
+            </div>
+          </dl>
+        </section>
       </div>
     </main>
   );

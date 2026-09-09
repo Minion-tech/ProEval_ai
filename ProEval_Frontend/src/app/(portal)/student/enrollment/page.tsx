@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { AlertCircle, Loader2, CheckCircle2, Copy, Check, FileText, Presentation, Video, Code, Sparkles, History } from "lucide-react"
+import { StudentJourneyBanner } from "@/components/common/StudentJourneyBanner"
 
 export default function StudentEnrollmentPage() {
   const { user, loading } = useAuth()
@@ -345,7 +346,7 @@ export default function StudentEnrollmentPage() {
   if (existingProject?.project && existingProject.project.current_phase === "COMPLETED") {
       return (
           <div className="container mx-auto px-4 py-12 text-center space-y-4">
-              <h1 className="text-2xl font-bold text-green-600">Project Fully Completed</h1>
+              <h1 className="text-2xl font-bold text-emerald-600">Project Fully Completed</h1>
               <p>You have successfully completed all project phases and evaluations.</p>
               <Button onClick={() => router.push("/student/my-team")}>View Final Results</Button>
           </div>
@@ -378,54 +379,64 @@ export default function StudentEnrollmentPage() {
   const isLeader = existingProject?.user_role === "Team Leader";
 
   return (
-    <main className="container mx-auto px-4 py-12">
-      <div className="space-y-8">
-        <div className="flex justify-between items-center">
-            <h1 className="text-4xl font-bold">Student Enrollment</h1>
-            {hasActiveProject && (
-                <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full font-medium">
-                    Team ID: {existingProject?.project?.team_id}
-                </div>
-            )}
-        </div>
+    <main className="container mx-auto px-4 py-8 md:py-12 space-y-6">
+      <StudentJourneyBanner
+        currentPhase={existingProject?.project?.current_phase || "NO_TEAM"}
+        isLeader={existingProject?.user_role === "Team Leader" || existingProject?.user_role === "Leader / Product Manager"}
+        hasTeam={!!existingProject?.project}
+      />
 
-        {/* Phase Indicator */}
-        <div className="flex justify-center gap-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Enrollment</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Student & Project Registration</h1>
+          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            Complete your proposal to create the team workspace.
+          </p>
+        </div>
+        {hasActiveProject && (
+          <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs">
+            <span className="text-muted-foreground">Team</span>{" "}
+            <span className="font-mono font-medium text-foreground">{existingProject?.project?.team_id}</span>
+          </div>
+        )}
+      </div>
+
+        {/* Phase Indicator — editorial */}
+        <div className="flex items-center justify-center gap-2 py-2">
           {phases.map((phase, idx) => (
-            <div key={phase.number} className="flex items-center gap-4">
-              <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-colors ${
-                  currentPhase >= phase.number
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground"
-                }`}
-              >
-                {phase.number}
+            <div key={phase.number} className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
+                <span
+                  className={`flex h-7 w-7 items-center justify-center rounded-full border text-xs font-medium transition-colors ${
+                    currentPhase >= phase.number ? "border-foreground bg-foreground text-background" : "border-border bg-background text-muted-foreground"
+                  }`}
+                >
+                  {phase.number}
+                </span>
+                <span className={`text-xs font-medium ${currentPhase >= phase.number ? "text-foreground" : "text-muted-foreground"}`}>
+                  Phase {phase.number}
+                </span>
               </div>
-              <div className="text-sm font-medium">
-                Phase {phase.number} · {phase.label}
-              </div>
-              {idx < phases.length - 1 && (
-                <div className={`w-16 h-1 ${currentPhase > phase.number ? "bg-primary" : "bg-muted"}`} />
-              )}
+              {idx < phases.length - 1 && <span className={`mx-2 h-px w-8 ${currentPhase > phase.number ? "bg-foreground" : "bg-border"}`} />}
             </div>
           ))}
         </div>
 
-        {/* Form */}
-        <Card className="border-2 shadow-lg">
-          <CardHeader>
-            <CardTitle>
+        {/* Form — editorial */}
+        <Card className="border border-border bg-card">
+          <div className="border-b border-border px-6 py-4">
+            <h2 className="text-sm font-semibold tracking-tight text-foreground">
               {currentPhase === 1 && "Project Proposal"}
               {currentPhase === 2 && "Mid-term Submission"}
               {currentPhase === 3 && "Final Project Submission"}
-            </CardTitle>
-            <CardDescription>
-              {currentPhase === 1 && "Submit your project proposal for coordination review"}
-              {currentPhase === 2 && "Submit your mid-term progress report"}
-              {currentPhase === 3 && "Submit your final report, presentation, repo, and summary so the agents can identify hackathon and resume-readiness gaps"}
-            </CardDescription>
-          </CardHeader>
+            </h2>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              {currentPhase === 1 && "Submit your proposal for review"}
+              {currentPhase === 2 && "Submit your progress report"}
+              {currentPhase === 3 && "Submit final report, presentation and summary"}
+            </p>
+          </div>
           <CardContent>
             {hasActiveProject && !isLeader ? (
                 <div className="p-8 text-center space-y-4">
@@ -442,11 +453,11 @@ export default function StudentEnrollmentPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <Label htmlFor="fullName">Full Name</Label>
-                        <Input id="fullName" disabled value={formData.fullName} className="bg-gray-50" />
+                        <Input id="fullName" disabled value={formData.fullName} className="bg-muted" />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="enrollmentNo">Enrollment No.</Label>
-                        <Input id="enrollmentNo" disabled value={formData.enrollmentNo} className="bg-gray-50" />
+                        <Input id="enrollmentNo" disabled value={formData.enrollmentNo} className="bg-muted" />
                       </div>
                     </div>
 
@@ -458,9 +469,9 @@ export default function StudentEnrollmentPage() {
                         value={formData.projectTitle}
                         onChange={(e) => handleInputChange("projectTitle", e.target.value)}
                         disabled={hasActiveProject}
-                        className={formData.projectTitle.length > 0 && formData.projectTitle.length < 10 ? "border-red-500" : ""}
+                        className={formData.projectTitle.length > 0 && formData.projectTitle.length < 10 ? "border-destructive" : ""}
                       />
-                      <p className={`text-[10px] mt-1 ${formData.projectTitle.length >= 10 ? "text-green-600" : "text-gray-500"}`}>
+                      <p className={`text-[10px] mt-1 ${formData.projectTitle.length >= 10 ? "text-emerald-600" : "text-muted-foreground"}`}>
                         {formData.projectTitle.length} / 10 characters minimum
                       </p>
                     </div>
@@ -470,12 +481,12 @@ export default function StudentEnrollmentPage() {
                       <Textarea
                         id="projectObjective"
                         placeholder="State the main objective, problem being solved, and expected outcome..."
-                        className={`min-h-32 ${formData.projectObjective.length > 0 && formData.projectObjective.length < 50 ? "border-red-500" : ""}`}
+                        className={`min-h-32 ${formData.projectObjective.length > 0 && formData.projectObjective.length < 50 ? "border-destructive" : ""}`}
                         value={formData.projectObjective}
                         onChange={(e) => handleInputChange("projectObjective", e.target.value)}
                         disabled={hasActiveProject}
                       />
-                      <p className={`text-[10px] mt-1 ${formData.projectObjective.length >= 50 ? "text-green-600" : "text-gray-500"}`}>
+                      <p className={`text-[10px] mt-1 ${formData.projectObjective.length >= 50 ? "text-emerald-600" : "text-muted-foreground"}`}>
                         {formData.projectObjective.length} / 50 characters minimum
                       </p>
                     </div>
@@ -511,12 +522,12 @@ export default function StudentEnrollmentPage() {
                             <Textarea
                                 id="methodology"
                                 placeholder="Explain your planned implementation approach, modules, workflow, and validation method..."
-                                className={`min-h-32 ${formData.methodology.length > 0 && formData.methodology.length < 50 ? "border-red-500" : ""}`}
+                                className={`min-h-32 ${formData.methodology.length > 0 && formData.methodology.length < 50 ? "border-destructive" : ""}`}
                                 value={formData.methodology}
                                 onChange={(e) => handleInputChange("methodology", e.target.value)}
                                 disabled={hasActiveProject}
                             />
-                            <p className={`text-[10px] mt-1 ${formData.methodology.length >= 50 ? "text-green-600" : "text-gray-500"}`}>
+                            <p className={`text-[10px] mt-1 ${formData.methodology.length >= 50 ? "text-emerald-600" : "text-muted-foreground"}`}>
                                 {formData.methodology.length} / 50 characters minimum
                             </p>
                         </div>
@@ -529,7 +540,7 @@ export default function StudentEnrollmentPage() {
                                 onChange={handleUseCaseDiagramUpload}
                                 disabled={hasActiveProject}
                             />
-                            <p className={`text-[10px] mt-1 ${formData.useCaseDiagram ? "text-green-600" : "text-gray-500"}`}>
+                            <p className={`text-[10px] mt-1 ${formData.useCaseDiagram ? "text-emerald-600" : "text-muted-foreground"}`}>
                                 {formData.useCaseDiagramName || "Upload PNG, JPG, WebP, or SVG. Max 1 MB."}
                             </p>
                         </div>
@@ -556,12 +567,12 @@ export default function StudentEnrollmentPage() {
                 {/* Phase 2 View */}
                 {currentPhase === 2 && (
                     <div className="space-y-6">
-                    <Card className="border-none shadow-none bg-gray-50/50 p-4">
+                    <Card className="border-none shadow-none bg-muted/50 p-4">
                         <div className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="githubUrl">GitHub Repository URL</Label>
                                 <div className="flex items-center gap-2">
-                                    <Code className="text-gray-400 w-4 h-4" />
+                                    <Code className="text-muted-foreground w-4 h-4" />
                                     <Input
                                         id="githubUrl"
                                         type="url"
@@ -574,7 +585,7 @@ export default function StudentEnrollmentPage() {
                             <div className="space-y-2">
                                 <Label htmlFor="presentationUrl">Presentation PDF / Slides URL</Label>
                                 <div className="flex items-center gap-2">
-                                    <Presentation className="text-gray-400 w-4 h-4" />
+                                    <Presentation className="text-muted-foreground w-4 h-4" />
                                     <Input
                                         id="presentationUrl"
                                         type="url"
@@ -611,9 +622,9 @@ export default function StudentEnrollmentPage() {
                             </div>
                             <div className="space-y-2 max-h-40 overflow-y-auto">
                                 {phase2Data.completedMilestones.map((m, i) => (
-                                    <div key={i} className="flex justify-between items-center text-xs bg-white p-2 border rounded">
+                                    <div key={i} className="flex justify-between items-center text-xs bg-background p-2 border rounded">
                                         <span>{m}</span>
-                                        <Button variant="ghost" size="sm" className="h-6 text-red-500" onClick={() => removeMilestone(i)}>x</Button>
+                                        <Button variant="ghost" size="sm" className="h-6 text-destructive" onClick={() => removeMilestone(i)}>x</Button>
                                     </div>
                                 ))}
                             </div>
@@ -630,9 +641,9 @@ export default function StudentEnrollmentPage() {
                             </div>
                             <div className="space-y-2 max-h-40 overflow-y-auto">
                                 {phase2Data.pendingRisks.map((r, i) => (
-                                    <div key={i} className="flex justify-between items-center text-xs bg-white p-2 border rounded">
+                                    <div key={i} className="flex justify-between items-center text-xs bg-background p-2 border rounded">
                                         <span>{r}</span>
-                                        <Button variant="ghost" size="sm" className="h-6 text-red-500" onClick={() => removeRisk(i)}>x</Button>
+                                        <Button variant="ghost" size="sm" className="h-6 text-destructive" onClick={() => removeRisk(i)}>x</Button>
                                     </div>
                                 ))}
                             </div>
@@ -658,7 +669,7 @@ export default function StudentEnrollmentPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label className="flex items-center gap-2">
-                                    <Presentation className="w-4 h-4 text-orange-600" /> Presentation URL (PPT/PDF)
+                                    <Presentation className="w-4 h-4 text-orange-500" /> Presentation URL (PPT/PDF)
                                 </Label>
                                 <Input 
                                     type="file"
@@ -669,7 +680,7 @@ export default function StudentEnrollmentPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label className="flex items-center gap-2">
-                                    <Code className="w-4 h-4 text-purple-600" /> GitHub URL
+                                    <Code className="w-4 h-4 text-primary" /> GitHub URL
                                 </Label>
                                 <Input 
                                     placeholder="Link to the final GitHub repository used as engineering evidence" 
@@ -679,7 +690,7 @@ export default function StudentEnrollmentPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label className="flex items-center gap-2">
-                                    <Video className="w-4 h-4 text-red-600" /> Demo Video Link (Optional)
+                                    <Video className="w-4 h-4 text-destructive" /> Demo Video Link (Optional)
                                 </Label>
                                 <Input 
                                     placeholder="Optional YouTube / Drive demo used to strengthen hackathon readiness" 
@@ -714,17 +725,17 @@ export default function StudentEnrollmentPage() {
                 )}
 
                 {message && (
-                    <div className="p-6 bg-green-50 border border-green-200 rounded-xl space-y-4">
-                        <div className="flex items-center gap-2 text-green-800 font-semibold">
+                    <div className="p-6 bg-emerald-50 border border-emerald-200 rounded-xl space-y-4">
+                        <div className="flex items-center gap-2 text-emerald-800 font-semibold">
                             <CheckCircle2 className="h-5 w-5" />
                             <span>{message.split('!')[0]}!</span>
                         </div>
                         
                         {existingProject?.project?.team_id && currentPhase === 1 && (
                             <div className="space-y-3">
-                                <p className="text-sm text-green-700">Share this unique **Team ID** with your teammates:</p>
+                                <p className="text-sm text-emerald-700">Share this unique **Team ID** with your teammates:</p>
                                 <div className="flex items-center gap-2">
-                                    <div className="flex-1 bg-white border border-green-200 rounded-lg px-4 py-3 font-mono text-lg font-bold text-primary flex items-center justify-between shadow-sm">
+                                    <div className="flex-1 bg-background border border-emerald-200 rounded-lg px-4 py-3 font-mono text-lg font-bold text-primary flex items-center justify-between shadow-sm">
                                         {existingProject?.project?.team_id}
                                         <Button 
                                             type="button"
@@ -740,12 +751,12 @@ export default function StudentEnrollmentPage() {
                             </div>
                         )}
                         <div className="flex flex-col sm:flex-row gap-3">
-                            <p className="text-xs text-green-600 italic flex-1">Submission received. Navigate to your Team Dashboard for detailed status.</p>
+                            <p className="text-xs text-emerald-600 italic flex-1">Submission received. Navigate to your Team Dashboard for detailed status.</p>
                             <Button 
                                 type="button" 
                                 size="sm" 
                                 variant="outline" 
-                                className="text-primary border-primary hover:bg-primary/5"
+                                className="text-primary border-primary hover:bg-primary/10"
                                 onClick={() => router.push("/student/feedback")}
                             >
                                 <Sparkles className="w-4 h-4 mr-2" />
@@ -756,7 +767,7 @@ export default function StudentEnrollmentPage() {
                 )}
                 
                 {error && (
-                    <div className="p-4 bg-red-50 border border-red-200 rounded-md text-red-800 flex items-center gap-2">
+                    <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive flex items-center gap-2">
                         <AlertCircle className="w-4 h-4" /> {error}
                     </div>
                 )}
@@ -828,7 +839,6 @@ export default function StudentEnrollmentPage() {
                 </CardContent>
             </Card>
         )}
-      </div>
     </main>
   )
 }

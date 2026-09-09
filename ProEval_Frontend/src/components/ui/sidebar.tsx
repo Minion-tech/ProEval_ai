@@ -17,9 +17,7 @@ interface SidebarContextProps {
   animate: boolean;
 }
 
-const SidebarContext = createContext<SidebarContextProps | undefined>(
-  undefined
-);
+const SidebarContext = createContext<SidebarContextProps | undefined>(undefined);
 
 export const useSidebar = () => {
   const context = useContext(SidebarContext);
@@ -89,11 +87,11 @@ export const DesktopSidebar = ({
     <>
       <motion.div
         className={cn(
-          "relative z-40 pointer-events-auto h-full px-4 py-4 hidden md:flex md:flex-col bg-neutral-100 dark:bg-neutral-800 w-[300px] shrink-0",
+          "relative z-40 hidden h-full shrink-0 flex-col border-r border-border bg-background px-4 py-6 md:flex",
           className
         )}
         animate={{
-          width: animate ? (open ? "300px" : "60px") : "300px",
+          width: animate ? (open ? "280px" : "68px") : "280px",
         }}
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
@@ -115,15 +113,12 @@ export const MobileSidebar = ({
     <>
       <div
         className={cn(
-          "h-10 px-4 py-4 flex flex-row md:hidden  items-center justify-between bg-neutral-100 dark:bg-neutral-800 w-full"
+          "flex h-12 w-full flex-row items-center justify-between border-b border-border bg-background px-4 py-2 md:hidden"
         )}
         {...props}
       >
-        <div className="flex justify-end z-20 w-full">
-          <IconMenu2
-            className="text-neutral-800 dark:text-neutral-200"
-            onClick={() => setOpen(!open)}
-          />
+        <div className="flex w-full justify-end">
+          <IconMenu2 className="cursor-pointer text-foreground" onClick={() => setOpen(!open)} />
         </div>
         <AnimatePresence>
           {open && (
@@ -132,18 +127,15 @@ export const MobileSidebar = ({
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: "-100%", opacity: 0 }}
               transition={{
-                duration: 0.3,
+                duration: 0.2,
                 ease: "easeInOut",
               }}
               className={cn(
-                "fixed top-0 left-0 h-full w-[280px] max-w-full bg-white dark:bg-neutral-900 p-6 z-[100] shadow-2xl flex flex-col justify-between",
+                "fixed left-0 top-0 z-[100] flex h-full w-[280px] max-w-full flex-col justify-between border-r border-border bg-background p-6",
                 className
               )}
             >
-              <div
-                className="absolute right-10 top-10 z-50 text-neutral-800 dark:text-neutral-200"
-                onClick={() => setOpen(!open)}
-              >
+              <div className="absolute right-6 top-6 z-50 cursor-pointer text-foreground" onClick={() => setOpen(!open)}>
                 <IconX />
               </div>
               {children}
@@ -168,19 +160,19 @@ export const SidebarLink = ({
     <a
       href={link.href}
       className={cn(
-        "flex items-center justify-start gap-2  group/sidebar py-2",
+        "flex items-center justify-start gap-3 rounded-md px-3 py-2.5 text-muted-foreground transition-colors duration-200 hover:bg-muted hover:text-foreground",
         className
       )}
       {...props}
     >
-      {link.icon}
+      <div className="text-muted-foreground transition-colors group-hover/sidebar:text-foreground">{link.icon}</div>
 
       <motion.span
         animate={{
           display: animate ? (open ? "inline-block" : "none") : "inline-block",
           opacity: animate ? (open ? 1 : 0) : 1,
         }}
-        className="text-neutral-700 dark:text-neutral-200 text-sm group-hover/sidebar:translate-x-1 transition duration-150 whitespace-pre inline-block !p-0 !m-0"
+        className="whitespace-pre text-xs font-medium text-muted-foreground transition-colors group-hover/sidebar:text-foreground !m-0 !p-0"
       >
         {link.label}
       </motion.span>

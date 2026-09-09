@@ -29,32 +29,32 @@ export default function AdminLayout({
     {
       label: "Dashboard",
       href: "/admin/dashboard",
-      icon: <IconLayoutDashboard className="h-5 w-5 flex-shrink-0 text-neutral-700 dark:text-neutral-200" />,
+      icon: <IconLayoutDashboard className="h-5 w-5 flex-shrink-0 text-muted-foreground dark:text-muted-foreground/60" />,
     },
     {
       label: "Users",
       href: "/admin/users",
-      icon: <IconUsers className="h-5 w-5 flex-shrink-0 text-neutral-700 dark:text-neutral-200" />,
+      icon: <IconUsers className="h-5 w-5 flex-shrink-0 text-muted-foreground dark:text-muted-foreground/60" />,
     },
     {
       label: "Projects",
       href: "/admin/projects",
-      icon: <IconClipboardList className="h-5 w-5 flex-shrink-0 text-neutral-700 dark:text-neutral-200" />,
+      icon: <IconClipboardList className="h-5 w-5 flex-shrink-0 text-muted-foreground dark:text-muted-foreground/60" />,
     },
     {
       label: "Evaluations",
       href: "/admin/evaluations",
-      icon: <IconMessageCircle className="h-5 w-5 flex-shrink-0 text-neutral-700 dark:text-neutral-200" />,
+      icon: <IconMessageCircle className="h-5 w-5 flex-shrink-0 text-muted-foreground dark:text-muted-foreground/60" />,
     },
     {
       label: "Settings",
       href: "/admin/settings",
-      icon: <IconSettings className="h-5 w-5 flex-shrink-0 text-neutral-700 dark:text-neutral-200" />,
+      icon: <IconSettings className="h-5 w-5 flex-shrink-0 text-muted-foreground dark:text-muted-foreground/60" />,
     },
     {
       label: "Reports",
       href: "/admin/reports",
-      icon: <IconLayoutDashboard className="h-5 w-5 flex-shrink-0 text-neutral-700 dark:text-neutral-200" />,
+      icon: <IconLayoutDashboard className="h-5 w-5 flex-shrink-0 text-muted-foreground dark:text-muted-foreground/60" />,
     },
     {
       label: "Logout",
@@ -63,7 +63,7 @@ export default function AdminLayout({
         logout();
         router.push("/login");
       },
-      icon: <IconArrowLeft className="h-5 w-5 flex-shrink-0 text-neutral-700 dark:text-neutral-200" />,
+      icon: <IconArrowLeft className="h-5 w-5 flex-shrink-0 text-muted-foreground dark:text-muted-foreground/60" />,
     },
   ];
 
@@ -79,7 +79,7 @@ export default function AdminLayout({
   return (
     <div
       className={cn(
-        "flex h-screen w-full max-w-full flex-1 flex-col overflow-hidden rounded-md border border-neutral-200 bg-gray-100 md:flex-row dark:border-neutral-700 dark:bg-neutral-800"
+        "flex h-screen w-full max-w-full flex-1 flex-col overflow-hidden rounded-md border border-border bg-background md:flex-row dark:border-sidebar-border dark:bg-sidebar"
       )}
     >
       <Sidebar open={open} setOpen={setOpen}>
@@ -98,7 +98,7 @@ export default function AdminLayout({
                 label: user?.name || "Admin",
                 href: "/admin/settings",
                 icon: (
-                  <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
+                  <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-foreground">
                     {userInitials}
                   </div>
                 ),
@@ -107,7 +107,7 @@ export default function AdminLayout({
           </div>
         </SidebarBody>
       </Sidebar>
-      <div className="flex-1 overflow-y-auto bg-white dark:bg-neutral-900">{children}</div>
+      <div className="flex-1 overflow-y-auto bg-card dark:bg-sidebar">{children}</div>
     </div>
   );
 }
@@ -116,13 +116,13 @@ const Logo = () => {
   return (
     <Link
       href="/admin/dashboard"
-      className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black"
+      className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-foreground"
     >
-      <div className="h-5 w-6 flex-shrink-0 rounded-bl-sm rounded-br-lg rounded-tl-lg rounded-tr-sm bg-black dark:bg-white" />
+      <div className="h-5 w-6 flex-shrink-0 rounded-bl-sm rounded-br-lg rounded-tl-lg rounded-tr-sm bg-foreground dark:bg-background" />
       <motion.span
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="whitespace-pre font-medium text-black dark:text-white"
+        className="whitespace-pre font-medium text-foreground dark:text-foreground"
       >
         Admin Panel
       </motion.span>
@@ -134,9 +134,9 @@ const LogoIcon = () => {
   return (
     <Link
       href="/admin/dashboard"
-      className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black"
+      className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-foreground"
     >
-      <div className="h-5 w-6 flex-shrink-0 rounded-bl-sm rounded-br-lg rounded-tl-lg rounded-tr-sm bg-black dark:bg-white" />
+      <div className="h-5 w-6 flex-shrink-0 rounded-bl-sm rounded-br-lg rounded-tl-lg rounded-tr-sm bg-foreground dark:bg-background" />
     </Link>
   );
 };

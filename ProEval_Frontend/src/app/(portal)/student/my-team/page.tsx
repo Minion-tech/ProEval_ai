@@ -2,15 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Crown, ExternalLink, Loader2, Users } from "lucide-react";
+import Link from "next/link";
+import { Copy, Check, Loader2, ArrowRight } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { projectService, type MyProjectResponse } from "@/lib/project-service";
 import { isTestUserEmail } from "@/lib/portal-mode";
 import Phase1Form from "@/components/forms/Phase1Form";
 import ProjectPhaseCards from "@/components/submission/ProjectPhaseCards";
-import { Badge } from "@/components/ui/badge";
+import { StudentJourneyBanner } from "@/components/common/StudentJourneyBanner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function MyTeamPage() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function MyTeamPage() {
   const isTestUser = isTestUserEmail(user?.email);
   const [projectData, setProjectData] = useState<MyProjectResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -42,68 +44,132 @@ export default function MyTeamPage() {
     load();
   }, [isTestUser, router]);
 
+  const handleCopyTeamId = (teamId: string) => {
+    navigator.clipboard.writeText(teamId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   if (authLoading || loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">Loading team</p>
       </div>
     );
   }
 
   if (!projectData?.project) return null;
 
-  const { project, user_role, member_count, members } = projectData;
+  const { project, member_count, members, latest_evaluation_status } = projectData;
   const isLeader = project.leader_id === user?.id;
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 md:p-8">
-      <div className="max-w-4xl mx-auto space-y-8">
-        <Card className="border-2 shadow-sm">
-          <CardHeader className="bg-primary/5 border-b">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <CardTitle className="text-2xl font-extrabold tracking-tight">
-                {project.phase_1_data?.title || "My Team"}
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-sm font-mono">
-                  {project.team_id}
-                </Badge>
-                <Badge>{project.current_phase.replace("_", " ")}</Badge>
+    <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8 md:py-12">
+      <div className="space-y-10 md:space-y-12">
+        <StudentJourneyBanner
+          currentPhase={project.current_phase}
+          isLeader={isLeader}
+          latestStatus={latest_evaluation_status ?? undefined}
+          hasTeam={true}
+        />
+
+        <section className="rounded-xl border border-border bg-card">
+          <div className="flex flex-col gap-4 border-b border-border px-6 py-6 md:flex-row md:items-start md:justify-between md:px-8">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Team workspace · {isLeader ? "Leader" : "Member"}
+              </p>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">
+                {project.phase_1_data?.title || "Project Team Workspace"}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {member_count} member{member_count !== 1 ? "s" : ""} · Phase {project.current_phase.replace(/_/g, " ")}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2">
+              <div className="space-y-0.5">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Team ID</p>
+                <p className="font-mono text-sm font-medium tracking-tight text-foreground">{project.team_id}</p>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-6 space-y-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Users className="h-4 w-4" />
-              <span>{member_count} member{member_count !== 1 ? "s" : ""}</span>
-              <span>•</span>
-              <span>
-                Your role: <strong>{user_role}</strong>
-              </span>
-            </div>
-
-            <div className="grid gap-2">
-              {members.map((member) => (
-                <div key={member.email} className="flex items-center gap-3 rounded-lg border bg-muted/40 p-3">
-                  {member.is_leader && <Crown className="h-4 w-4 shrink-0 text-yellow-500" />}
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">{member.name}</p>
-                    <p className="truncate text-xs text-muted-foreground">{member.role}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <Button variant="outline" onClick={() => router.push("/student/feedback")}>
-                <ExternalLink className="mr-2 h-4 w-4" />
-                View Shared Feedback
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleCopyTeamId(project.team_id)}
+                className="ml-2 h-7 gap-1.5 text-xs"
+              >
+                {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied ? "Copied" : "Copy"}
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        <div className="space-y-6">
+          <CardContent className="space-y-8 p-6 md:p-8">
+            <div className="space-y-3">
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Roster</h2>
+              <ul className="grid gap-3 md:grid-cols-3">
+                {members.map((member) => {
+                  const initials = member.name
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .toUpperCase()
+                    .slice(0, 2);
+                  return (
+                    <li
+                      key={member.email}
+                      className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-3"
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-foreground text-xs font-medium text-background">
+                        {initials}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-foreground">
+                          {member.name} {member.email === user?.email ? "· You" : ""}
+                        </span>
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {member.role}
+                          {member.is_leader ? " · Leader" : ""}
+                        </span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+
+            <div className="flex flex-wrap gap-3 border-t border-border pt-6">
+              <Button variant="outline" asChild className="h-9">
+                <Link href="/student/feedback">View Feedback</Link>
+              </Button>
+              {isLeader && (
+                <Button asChild className="group h-9 gap-1.5 bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
+                  <Link
+                    href={
+                      project.current_phase === "PHASE_2"
+                        ? "/student/submit/phase2"
+                        : project.current_phase === "FINAL"
+                          ? "/student/submit/final"
+                          : "/student/submit/phase1"
+                    }
+                    className="inline-flex items-center gap-1.5"
+                  >
+                    Continue Submission
+                    <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+                  </Link>
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </section>
+
+        <section className="space-y-6">
+          <div className="space-y-2">
+            <h2 className="text-xl font-semibold tracking-tight text-foreground">Phase Deliverables</h2>
+            <p className="text-sm leading-relaxed text-muted-foreground">Complete each phase to move toward final evaluation.</p>
+          </div>
+
           <ProjectPhaseCards
             projectId={project.id}
             currentPhase={project.current_phase}
@@ -114,24 +180,27 @@ export default function MyTeamPage() {
           />
 
           {isLeader ? (
-            <div className="space-y-4 border-t pt-8">
-              <div className="flex flex-col gap-1">
-                <h2 className="text-2xl font-extrabold tracking-tight">Refine Project Proposal</h2>
-                <p className="text-muted-foreground">
-                  As the team leader, you can edit and resubmit Phase 1 after reviewing AI feedback.
-                </p>
+            <div className="space-y-4 border-t border-border pt-8">
+              <div className="space-y-1">
+                <h3 className="text-base font-semibold tracking-tight text-foreground">Phase 1 — Proposal</h3>
+                <p className="text-sm text-muted-foreground">As leader you can edit and resubmit the proposal after review.</p>
               </div>
               <Phase1Form />
             </div>
           ) : (
-            <Card className="border-dashed border-2">
-              <CardContent className="py-10 text-center text-muted-foreground">
-                <p className="font-medium">Only the team leader can edit and resubmit project phases.</p>
-                <p className="mt-1 text-sm">Members still see the same feedback trail and team progress.</p>
+            <Card className="border border-dashed border-border bg-muted/20">
+              <CardContent className="space-y-3 px-6 py-8 text-center">
+                <h3 className="text-sm font-semibold text-foreground">Member access</h3>
+                <p className="mx-auto max-w-md text-sm leading-relaxed text-muted-foreground">
+                  Only the leader submits deliverables. You share the same feedback trail and can prepare for the Viva.
+                </p>
+                <Button variant="outline" asChild size="sm" className="mt-1">
+                  <Link href="/student/feedback">Open Feedback</Link>
+                </Button>
               </CardContent>
             </Card>
           )}
-        </div>
+        </section>
       </div>
     </main>
   );

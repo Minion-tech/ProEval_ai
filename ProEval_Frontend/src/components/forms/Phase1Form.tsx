@@ -3,12 +3,12 @@
 import { type ChangeEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { projectService } from "@/lib/project-service";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 interface Phase1FormProps {
   showCancelButton?: boolean;
@@ -35,7 +35,6 @@ export default function Phase1Form({
     techStack: "",
   });
 
-  // 1. Load current project for edit/resubmit flow
   useEffect(() => {
     async function loadCurrentProject() {
       try {
@@ -58,7 +57,7 @@ export default function Phase1Form({
           }
         }
       } catch {
-        // Keep the form usable for first-time submit if project fetch fails.
+        // Keep form usable for first submission
       } finally {
         setLoadingProject(false);
       }
@@ -68,17 +67,15 @@ export default function Phase1Form({
 
   const handleUseCaseDiagramUpload = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-
     if (!file) return;
 
     const allowedTypes = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
     if (!allowedTypes.includes(file.type)) {
-      setError("Use case diagram must be a PNG, JPG, WebP, or SVG image.");
+      setError("Use case diagram must be PNG, JPG, WebP or SVG.");
       return;
     }
-
     if (file.size > 1024 * 1024) {
-      setError("Use case diagram must be 1 MB or smaller.");
+      setError("File must be 1 MB or smaller.");
       return;
     }
 
@@ -91,7 +88,7 @@ export default function Phase1Form({
       }));
       setError(null);
     };
-    reader.onerror = () => setError("Could not read the selected use case diagram.");
+    reader.onerror = () => setError("Could not read the selected file.");
     reader.readAsDataURL(file);
   };
 
@@ -124,7 +121,6 @@ export default function Phase1Form({
         await projectService.submitPhase1(payload);
       }
 
-      // Always redirect to feedback after submission
       router.push("/student/feedback");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit proposal.");
@@ -136,86 +132,81 @@ export default function Phase1Form({
   if (loadingProject) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      <Card className="border-2 shadow-sm">
-        <CardHeader className="bg-primary/5 border-b">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            Project Essentials
-          </CardTitle>
-          <CardDescription>
-            Provide high-level details about your research or application.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <Card className="border border-border bg-card">
+        <div className="border-b border-border px-6 py-4">
+          <h3 className="text-sm font-semibold tracking-tight text-foreground">Project essentials</h3>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            High-level description of your research or application.
+          </p>
+        </div>
+        <CardContent className="space-y-6 p-6">
+          <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="title">Project Title</Label>
+              <Label htmlFor="title" className="text-sm font-medium">
+                Project title <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="title"
                 required
-                placeholder="e.g. AI-Powered Health Diagnostic System"
+                placeholder="AI-Powered Health Diagnostic System"
                 value={formData.title}
-                onChange={(e) =>
-                  setFormData({ ...formData, title: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="domain">Domain</Label>
+              <Label htmlFor="domain" className="text-sm font-medium">
+                Domain <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="domain"
                 required
-                placeholder="e.g. Artificial Intelligence / Web Tech"
+                placeholder="Artificial Intelligence / Web Tech"
                 value={formData.domain}
-                onChange={(e) =>
-                  setFormData({ ...formData, domain: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, domain: e.target.value })}
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="objective">Project Objective</Label>
+            <Label htmlFor="objective" className="text-sm font-medium">
+              Objective <span className="text-destructive">*</span>
+            </Label>
             <Textarea
               id="objective"
               required
-              rows={8}
-              placeholder="State the main objective, problem being solved, and expected outcome..."
+              rows={7}
+              placeholder="State the problem, goals and expected outcome..."
               value={formData.objective}
-              onChange={(e) =>
-                setFormData({ ...formData, objective: e.target.value })
-              }
-              className="resize-none"
+              onChange={(e) => setFormData({ ...formData, objective: e.target.value })}
             />
-            <p className="text-xs text-muted-foreground text-right">
-              Minimum 200 characters recommended for better AI analysis.
-            </p>
+            <p className="text-xs text-muted-foreground">200 characters recommended for better analysis.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="methodology">Methodology</Label>
+              <Label htmlFor="methodology" className="text-sm font-medium">
+                Methodology <span className="text-destructive">*</span>
+              </Label>
               <Textarea
                 id="methodology"
                 required
-                rows={6}
-                placeholder="Explain your implementation approach, modules, workflow, and validation method..."
+                rows={5}
+                placeholder="Explain approach, modules, workflow and validation..."
                 value={formData.methodology}
-                onChange={(e) =>
-                  setFormData({ ...formData, methodology: e.target.value })
-                }
-                className="resize-none"
+                onChange={(e) => setFormData({ ...formData, methodology: e.target.value })}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="useCaseDiagram">Use Case Diagram</Label>
+              <Label htmlFor="useCaseDiagram" className="text-sm font-medium">
+                Use case diagram
+              </Label>
               <Input
                 id="useCaseDiagram"
                 type="file"
@@ -223,56 +214,46 @@ export default function Phase1Form({
                 required={!formData.useCaseDiagram}
                 onChange={handleUseCaseDiagramUpload}
               />
-              <p
-                className={`text-xs ${
-                  formData.useCaseDiagram
-                    ? "text-green-600"
-                    : "text-muted-foreground"
-                }`}
-              >
-                {formData.useCaseDiagramName ||
-                  "Upload PNG, JPG, WebP, or SVG. Max 1 MB."}
+              <p className={`text-xs ${formData.useCaseDiagram ? "font-medium text-foreground" : "text-muted-foreground"}`}>
+                {formData.useCaseDiagramName || "PNG, JPG, WebP or SVG — max 1 MB."}
               </p>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="techStack">Tech Stack</Label>
+            <Label htmlFor="techStack" className="text-sm font-medium">
+              Tech stack <span className="text-destructive">*</span>
+            </Label>
             <Textarea
               id="techStack"
               required
-              rows={5}
+              rows={4}
               placeholder={"Next.js\nFastAPI\nPostgreSQL"}
               value={formData.techStack}
-              onChange={(e) =>
-                setFormData({ ...formData, techStack: e.target.value })
-              }
-              className="resize-none"
+              onChange={(e) => setFormData({ ...formData, techStack: e.target.value })}
             />
-            <p className="text-xs text-muted-foreground">
-              Enter one technology per line.
-            </p>
+            <p className="text-xs text-muted-foreground">One technology per line.</p>
           </div>
         </CardContent>
       </Card>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+        <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error}
         </div>
       )}
 
-      <div className="flex justify-end gap-4">
+      <div className="flex justify-end gap-3 border-t border-border pt-6">
         {showCancelButton && (
-          <Button variant="outline" type="button" onClick={onCancel}>
+          <Button variant="outline" type="button" onClick={onCancel} className="h-9">
             Cancel
           </Button>
         )}
-        <Button type="submit" disabled={submitting} className="min-w-[150px] shadow-lg">
+        <Button type="submit" disabled={submitting} className="h-9 min-w-[140px] bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
           {submitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Analyzing...
+              Submitting
             </>
           ) : existingSubmissionId ? (
             "Resubmit Proposal"
