@@ -2,35 +2,24 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { parseAiNarrative } from "@/lib/feedback-parser";
 import { isTestUserEmail } from "@/lib/portal-mode";
-import { 
-  CheckCircle2, 
-  AlertCircle, 
-  Info, 
-  Lightbulb, 
-  Users, 
-  Loader2, 
-  Clock, 
-  RefreshCw, 
-  HelpCircle, 
-  Target,
-  ShieldAlert,
-  CalendarDays,
-  ArrowRight,
-  Sparkles,
-  Code2,
+import {
+  AlertCircle,
+  Loader2,
+  RefreshCw,
+  Clock,
+  HelpCircle,
   Download,
-  Mic
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { projectService, ProjectSubmission } from "@/lib/project-service";
 import { RoadmapTimeline } from "@/components/roadmap-timeline";
+import { StudentJourneyBanner } from "@/components/common/StudentJourneyBanner";
 
 interface EvaluationData {
   id: string;
@@ -39,7 +28,7 @@ interface EvaluationData {
   status: string;
   total_score: number;
   ai_narrative: string;
-  agent_logs?: any;
+  agent_logs?: unknown;
   created_at: string;
 }
 
@@ -47,7 +36,7 @@ export default function StudentFeedbackPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const isTestUser = isTestUserEmail(user?.email);
-  const [projectData, setProjectData] = useState<any>(null);
+  const [projectData, setProjectData] = useState<unknown>(null);
   const [project, setProject] = useState<ProjectSubmission | null>(null);
   const [evaluations, setEvaluations] = useState<Record<string, EvaluationData | null>>({
     PHASE_1: null,
@@ -61,58 +50,61 @@ export default function StudentFeedbackPage() {
   const [rawOpenFor, setRawOpenFor] = useState<string | null>(null);
   const [selectedRoadmapIndex, setSelectedRoadmapIndex] = useState(0);
 
-  const fetchEvaluations = useCallback(async (silent = false) => {
-    if (!user) return;
+  const fetchEvaluations = useCallback(
+    async (silent = false) => {
+      if (!user) return;
 
-    try {
-      if (!silent) setLoading(true);
-      setError(null);
-      const projectRes = await projectService.getMyProject({ testMode: isTestUser });
-      const currentProject = projectRes.data?.project ?? null;
-      if (!currentProject) {
-        if (!silent) setLoading(false);
-        return;
-      }
+      try {
+        if (!silent) setLoading(true);
+        setError(null);
+        const projectRes = await projectService.getMyProject({ testMode: isTestUser });
+        const currentProject = projectRes.data?.project ?? null;
+        if (!currentProject) {
+          if (!silent) setLoading(false);
+          return;
+        }
 
-      setProject(currentProject);
-      setProjectData(projectRes.data);
-      setIsLeader(currentProject.leader_id === user?.id);
+        setProject(currentProject);
+        setProjectData(projectRes.data);
+        setIsLeader(currentProject.leader_id === user?.id);
 
-      const phases = ["PHASE_1"];
-      if (currentProject.phase_2_data) phases.push("PHASE_2");
-      if (currentProject.final_data) {
-        phases.push("FINAL");
-        phases.push("INTERVIEW");
-      }
+        const phases = ["PHASE_1"];
+        if (currentProject.phase_2_data) phases.push("PHASE_2");
+        if (currentProject.final_data) {
+          phases.push("FINAL");
+          phases.push("INTERVIEW");
+        }
 
-      const evalResults: Record<string, EvaluationData | null> = {
-        PHASE_1: null,
-        PHASE_2: null,
-        FINAL: null,
-        INTERVIEW: null,
-      };
+        const evalResults: Record<string, EvaluationData | null> = {
+          PHASE_1: null,
+          PHASE_2: null,
+          FINAL: null,
+          INTERVIEW: null,
+        };
 
-      await Promise.all(
-        phases.map(async (phase) => {
-          try {
-            const res = await projectService.getEvaluation(currentProject.id, phase, { testMode: isTestUser });
-            if (res.data) {
-              evalResults[phase] = res.data;
+        await Promise.all(
+          phases.map(async (phase) => {
+            try {
+              const res = await projectService.getEvaluation(currentProject.id, phase, { testMode: isTestUser });
+              if (res.data) {
+                evalResults[phase] = res.data as EvaluationData;
+              }
+            } catch {
+              // no evaluation yet
             }
-          } catch {
-            // No evaluation for this phase yet
-          }
-        })
-      );
+          })
+        );
 
-      setEvaluations(evalResults);
-    } catch (err) {
-      console.error("Failed to fetch evaluations:", err);
-      if (!silent) setError("Could not load your evaluations. Please try again later.");
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, [isTestUser, user]);
+        setEvaluations(evalResults);
+      } catch (err) {
+        console.error("Failed to fetch evaluations:", err);
+        if (!silent) setError("Could not load evaluations. Please try again.");
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [isTestUser, user]
+  );
 
   useEffect(() => {
     if (!authLoading) {
@@ -120,87 +112,89 @@ export default function StudentFeedbackPage() {
     }
   }, [user, authLoading, fetchEvaluations]);
 
-  // Polling mechanism for pending evaluations
   useEffect(() => {
-    const isAnyPending = Object.values(evaluations).some(
-      (ev) => ev?.status === "PENDING" || ev?.status === "IN_PROGRESS"
-    );
+    const isAnyPending = Object.values(evaluations).some((ev) => ev?.status === "PENDING" || ev?.status === "IN_PROGRESS");
 
     if (isAnyPending) {
       const intervalId = setInterval(() => {
-        fetchEvaluations(true); // silent fetch
-      }, 5000); // Poll every 5 seconds
+        fetchEvaluations(true);
+      }, 5000);
 
       return () => clearInterval(intervalId);
     }
   }, [evaluations, fetchEvaluations]);
 
-  // Mark feedback as viewed when this page is opened
   useEffect(() => {
     if (project?.id && !isLeader) {
-      const me = projectData?.members?.find((m: any) => m.email === user?.email);
+      const me = (projectData as { members?: Array<{ email: string; has_viewed_feedback?: boolean }> })?.members?.find(
+        (m) => m.email === user?.email
+      );
       if (me && !me.has_viewed_feedback) {
-        projectService.markFeedbackViewed(project.id, { testMode: isTestUser })
-          .catch(err => console.error("Failed to mark feedback viewed:", err));
+        projectService.markFeedbackViewed(project.id, { testMode: isTestUser }).catch((err) => console.error("Failed to mark viewed:", err));
       }
     }
-  }, [project?.id, isLeader, projectData?.members, user?.email, isTestUser]);
+  }, [project?.id, isLeader, projectData, user?.email, isTestUser]);
 
   useEffect(() => {
     setSelectedRoadmapIndex(0);
   }, [evaluations.PHASE_1?.id, evaluations.PHASE_2?.id, evaluations.FINAL?.id, evaluations.INTERVIEW?.id]);
 
   const renderPhaseFeedback = (phaseKey: string, phaseLabel: string) => {
-    const item = evaluations[phaseKey];
+    const item = evaluations[phaseKey] as unknown as {
+      id: string;
+      status: string;
+      total_score: number;
+      ai_narrative: string;
+      agent_logs: Array<{
+        agent?: string;
+        reasoning?: string;
+        findings?: string[];
+        concerns?: string[];
+        recommendations?: string[];
+        improvement_actions?: string[];
+        timeline?: Array<{ weeks?: string; period?: string; goal?: string; title?: string; description?: string }>;
+        clarification_questions?: string[];
+        clarification_evaluations?: Array<{ question_index?: number; notes?: string; answer?: string }>;
+      }>;
+      created_at: string;
+    } | null;
 
     if (loading) {
       return (
-        <div className="flex flex-col items-center justify-center py-12 space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Fetching {phaseLabel} evaluation...</p>
+        <div className="flex flex-col items-center justify-center gap-3 py-16">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Loading {phaseLabel}</p>
         </div>
       );
     }
 
     if (!item) {
       return (
-        <Card className="border-dashed border-2">
-          <CardContent className="py-12 flex flex-col items-center justify-center text-center space-y-3">
-            <div className="bg-muted p-3 rounded-full">
-              <Clock className="h-6 w-6 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="font-semibold">No {phaseLabel} submission found.</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Submit your {phaseLabel} proposal to receive AI mentorship feedback.
-              </p>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => fetchEvaluations()}>
-              <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+        <div className="rounded-xl border border-dashed border-border bg-muted/20 px-6 py-12 text-center">
+          <div className="mx-auto max-w-md space-y-3">
+            <Clock className="mx-auto h-6 w-6 text-muted-foreground" />
+            <p className="text-sm font-medium text-foreground">No {phaseLabel} submission found</p>
+            <p className="text-sm leading-relaxed text-muted-foreground">Submit your {phaseLabel} to receive feedback.</p>
+            <Button variant="outline" size="sm" onClick={() => fetchEvaluations()} className="h-8">
+              <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Refresh
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       );
     }
 
     if (item.status === "PENDING" || item.status === "IN_PROGRESS") {
       return (
-        <Card className="border-dashed border-2 border-blue-200">
-          <CardContent className="py-12 flex flex-col items-center justify-center text-center space-y-3">
-            <div className="bg-blue-50 p-3 rounded-full">
-              <Loader2 className="h-6 w-6 text-blue-500 animate-spin" />
-            </div>
-            <div>
-              <p className="font-semibold">AI Mentor is analyzing your proposal...</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                This usually takes 30–60 seconds. Click refresh to check.
-              </p>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => fetchEvaluations()}>
-              <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+        <div className="rounded-xl border border-border bg-card px-6 py-12 text-center">
+          <div className="mx-auto max-w-md space-y-3">
+            <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
+            <p className="text-sm font-medium text-foreground">Analysis in progress</p>
+            <p className="text-sm text-muted-foreground">This usually takes under a minute. Refresh to check.</p>
+            <Button variant="outline" size="sm" onClick={() => fetchEvaluations()} className="h-8">
+              <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Refresh
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       );
     }
 
@@ -212,52 +206,48 @@ export default function StudentFeedbackPage() {
 
     if (item.status === "AWAITING_CLARIFICATION") {
       return (
-        <Card className="border-2 border-orange-200 bg-orange-50/30">
-          <CardContent className="py-12 flex flex-col items-center justify-center text-center space-y-3">
-            <div className="bg-orange-100 p-3 rounded-full">
-              <HelpCircle className="h-6 w-6 text-orange-600" />
-            </div>
-            <div>
-              <p className="font-semibold text-orange-900">Clarification Needed</p>
-              <p className="text-sm text-orange-700 mt-1 max-w-md">
-                The AI Mentors have some questions about your proposal before they can provide a final verdict.
-              </p>
-            </div>
+        <div className="rounded-xl border border-border bg-card px-6 py-12 text-center">
+          <div className="mx-auto max-w-md space-y-3">
+            <HelpCircle className="mx-auto h-6 w-6 text-muted-foreground" />
+            <p className="text-sm font-medium text-foreground">Clarification needed</p>
+            <p className="text-sm text-muted-foreground">A few questions need answers before evaluation is finalized.</p>
             {isLeader ? (
-              <Button className="bg-orange-600 hover:bg-orange-700" onClick={() => router.push(getSubmitRoute())}>Provide Clarifications</Button>
+              <Button onClick={() => router.push(getSubmitRoute())} className="h-8 bg-primary font-medium text-primary-foreground hover:bg-primary/90">
+                Provide answers
+              </Button>
             ) : (
-              <Button className="bg-orange-100 text-muted-foreground" disabled>Awaiting Leader</Button>
+              <Button variant="outline" disabled className="h-8">
+                Waiting for leader
+              </Button>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       );
     }
 
     if (item.status === "FAILED") {
       return (
-        <Card className="border-2 border-red-200">
-          <CardContent className="py-10 flex flex-col items-center justify-center text-center space-y-3">
-            <div className="bg-red-50 p-3 rounded-full">
-              <AlertCircle className="h-6 w-6 text-red-500" />
-            </div>
-            <div>
-              <p className="font-semibold">AI analysis failed.</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Resubmit your proposal to trigger a new evaluation.
-              </p>
-            </div>
+        <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-6 py-10 text-center">
+          <div className="mx-auto max-w-md space-y-3">
+            <AlertCircle className="mx-auto h-6 w-6 text-destructive" />
+            <p className="text-sm font-medium text-foreground">Analysis failed</p>
+            <p className="text-sm text-muted-foreground">Resubmit to trigger a new evaluation.</p>
             {isLeader ? (
-              <Button variant="outline" size="sm" onClick={() => router.push(getSubmitRoute())}>Edit &amp; Resubmit</Button>
+              <Button variant="outline" size="sm" onClick={() => router.push(getSubmitRoute())} className="h-8">
+                Edit & resubmit
+              </Button>
             ) : (
-              <Button variant="outline" size="sm" disabled>Leader Only</Button>
+              <Button variant="outline" size="sm" disabled className="h-8">
+                Leader only
+              </Button>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       );
     }
 
-    const buildParsedFromAgentLogs = (item: any) => {
-      const cleanAgentText = (value: any) => {
+    const buildParsedFromAgentLogs = (raw: typeof item) => {
+      const clean = (value: unknown) => {
         if (!value && value !== 0) return "";
         return value
           .toString()
@@ -272,64 +262,62 @@ export default function StudentFeedbackPage() {
           .trim();
       };
 
-      const htmlMode = item.ai_narrative?.trim().startsWith("<");
-      if (!htmlMode || !item.agent_logs?.length) {
-        return parseAiNarrative(item.ai_narrative);
+      const htmlMode = raw.ai_narrative?.trim().startsWith("<");
+      if (!htmlMode || !raw.agent_logs?.length) {
+        return parseAiNarrative(raw.ai_narrative);
       }
 
-      const primaryLog = item.agent_logs.find((l: any) => l.agent === "Architect") || item.agent_logs.find((l: any) => l.agent === "Ideator") || item.agent_logs[0] || {};
-      const secondaryLog = item.agent_logs.length > 1 ? (item.agent_logs.find((l: any) => l.agent === "Ideator") || item.agent_logs[1]) : {};
-      
+      const primaryLog = (
+        raw.agent_logs.find((l) => l.agent === "Architect") ||
+        raw.agent_logs.find((l) => l.agent === "Ideator") ||
+        raw.agent_logs[0] ||
+        {}
+      ) as unknown as Record<string, unknown>;
+      const secondaryLog = (
+        raw.agent_logs.length > 1 ? raw.agent_logs.find((l) => l.agent === "Ideator") || raw.agent_logs[1] : {}
+      ) as unknown as Record<string, unknown>;
+
       const guidanceItems = [
-        ...(primaryLog.improvement_actions || primaryLog.recommendations || []),
-        ...(secondaryLog.improvement_actions || secondaryLog.recommendations || []),
-      ];
+        ...((primaryLog.improvement_actions as string[]) || (primaryLog.recommendations as string[]) || []),
+        ...((secondaryLog.improvement_actions as string[]) || (secondaryLog.recommendations as string[]) || []),
+      ] as string[];
       const concernsItems = [
-        ...(primaryLog.findings || primaryLog.concerns || []),
-        ...(secondaryLog.findings || secondaryLog.concerns || []),
-      ];
-      
-      const timelineItems = [
-        ...(primaryLog.timeline || []),
-        ...(secondaryLog.timeline || []),
-      ];
+        ...((primaryLog.findings as string[]) || (primaryLog.concerns as string[]) || []),
+        ...((secondaryLog.findings as string[]) || (secondaryLog.concerns as string[]) || []),
+      ] as string[];
+      const timelineItems = [...((primaryLog.timeline as unknown[]) || []), ...((secondaryLog.timeline as unknown[]) || [])] as Array<Record<string, string>>;
 
       return {
         verdict: {
-          label: (primaryLog.verdict || "REFINE").toString().toUpperCase(),
-          score: Number(item.total_score ?? primaryLog.score ?? secondaryLog.score ?? 0),
-          summary: cleanAgentText(primaryLog.reasoning || ""),
+          label: ((primaryLog.verdict as string) || "REFINE").toString().toUpperCase(),
+          score: Number(raw.total_score ?? 0),
+          summary: clean(primaryLog.reasoning as string | undefined),
         },
-        guidance: Array.from(new Set(guidanceItems)).map((item: any) => ({ title: cleanAgentText(item), description: "" })),
-        concerns: Array.from(new Set(concernsItems)).map((item: any) => cleanAgentText(item)),
-        roadmap: timelineItems.map((s: any) => ({
-          period: cleanAgentText(s.weeks || s.week || s.period || "Phase"),
-          title: cleanAgentText(s.goal || s.guidance || s.title || ""),
-          description: cleanAgentText(s.description || s.details || ""),
+        guidance: Array.from(new Set(guidanceItems)).map((t) => ({ title: clean(t), description: "" })),
+        concerns: Array.from(new Set(concernsItems)).map((t) => clean(t)),
+        roadmap: timelineItems.map((s) => ({
+          period: clean(s.weeks || s.period || "Phase"),
+          title: clean(s.goal || s.title || ""),
+          description: clean(s.description || ""),
         })),
-        clarificationAnswers: (secondaryLog.clarification_evaluations || primaryLog.clarification_evaluations || []).map((c: any, index: number) => {
-          const questionIndex = c.question_index || index + 1;
-          const feedback = cleanAgentText(c.notes) || cleanAgentText(c.answer) || "No AI feedback available.";
-          return `Answer ${questionIndex}: ${feedback}`;
+        clarificationAnswers: (
+          ((secondaryLog.clarification_evaluations as unknown[]) || (primaryLog.clarification_evaluations as unknown[]) || []) as unknown[]
+        ).map((c: unknown, index: number) => {
+          const entry = c as { question_index?: number; notes?: string; answer?: string };
+          const feedback = clean(entry.notes) || clean(entry.answer) || "No feedback available.";
+          return `Answer ${entry.question_index || index + 1}: ${feedback}`;
         }),
-        ideatorReview: cleanAgentText(item.agent_logs.find((l: any) => l.agent === "Ideator")?.reasoning || ""),
-        architectReview: cleanAgentText(item.agent_logs.find((l: any) => l.agent === "Architect")?.reasoning || ""),
-        raw: item.ai_narrative,
+        ideatorReview: clean(raw.agent_logs.find((l) => l.agent === "Ideator")?.reasoning || ""),
+        architectReview: clean(raw.agent_logs.find((l) => l.agent === "Architect")?.reasoning || ""),
+        raw: raw.ai_narrative,
       };
     };
 
     const parsed = buildParsedFromAgentLogs(item);
-    const isHtmlOutput = !!item.ai_narrative?.trim().startsWith("<");
-    const ideatorSection = parsed.ideatorReview;
-    const architectSection = parsed.architectReview;
     const formattedDate = item.created_at
-      ? new Date(item.created_at).toLocaleDateString(undefined, {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
-      : "N/A";
-    const projectTitle = project?.phase_1_data?.title || "Project";
+      ? new Date(item.created_at).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
+      : "—";
+    const projectTitle = (project as { phase_1_data?: { title?: string } })?.phase_1_data?.title || "Project";
     const roadmapItem = parsed.roadmap[selectedRoadmapIndex] || parsed.roadmap[0];
 
     const downloadReport = () => {
@@ -337,362 +325,194 @@ export default function StudentFeedbackPage() {
       const date = formattedDate;
       const verdict = parsed.verdict.label;
       const summary = parsed.verdict.summary;
-      
+
       const content = `
         <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
         <head><meta charset='utf-8'><title>${phaseLabel} Report</title>
         <style>
-          body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; }
-          h1 { color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
-          h2 { color: #334155; margin-top: 25px; border-left: 4px solid #6366f1; padding-left: 10px; }
-          .verdict { font-weight: bold; padding: 10px; border-radius: 5px; background: #f8fafc; display: inline-block; }
-          .summary { font-style: italic; color: #475569; margin: 20px 0; padding: 15px; background: #f1f5f9; }
-          ul { margin-bottom: 20px; }
-          li { margin-bottom: 8px; }
-          .footer { margin-top: 50px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; }
-          .transcript { background: #1e293b; color: #f8fafc; padding: 15px; font-family: monospace; font-size: 11px; border-radius: 8px; }
+          body { font-family: 'Geist', Helvetica, sans-serif; line-height: 1.6; color: #111; }
+          h1 { font-size: 20px; border-bottom: 1px solid #E5E5E5; padding-bottom: 8px; }
+          h2 { font-size: 14px; margin-top: 20px; text-transform: uppercase; letter-spacing: 0.08em; color: #737373; }
+          .summary { font-size: 13px; color: #171717; margin: 12px 0; padding: 12px; border: 1px solid #E5E5E5; }
         </style>
         </head>
         <body>
           <h1>${phaseLabel}: ${title}</h1>
-          <p><strong>Date:</strong> ${date}</p>
-          <div class="verdict">AI Verdict: ${verdict}</div>
-          
-          <h2>Evaluation Summary</h2>
+          <p style="font-size:12px;color:#737373;">Date: ${date} · Verdict: ${verdict} · Score: ${parsed.verdict.score}/100</p>
+          <h2>Summary</h2>
           <div class="summary">${summary}</div>
-
-          ${parsed.guidance.length > 0 ? `
-            <h2>Guidance & Recommendations</h2>
-            <ul>${parsed.guidance.map(g => `<li><strong>${g.title}</strong></li>`).join('')}</ul>
-          ` : ''}
-
-          ${parsed.concerns.length > 0 ? `
-            <h2>Critical Risks & Concerns</h2>
-            <ul>${parsed.concerns.map(c => `<li>${c}</li>`).join('')}</ul>
-          ` : ''}
-
-          ${parsed.roadmap.length > 0 ? `
-            <h2>Execution Roadmap</h2>
-            ${parsed.roadmap.map(r => `<p><strong>${r.period}:</strong> ${r.title}<br/>${r.description}</p>`).join('')}
-          ` : ''}
-
-          ${item.ai_narrative ? `
-            <h2>AI Detailed Analysis</h2>
-            <div>${item.ai_narrative}</div>
-          ` : ''}
-
-          <div class="footer">
-            Generated by ProEval AI | Report ID: ${item.id} | Evaluation Phase: ${phaseLabel}
-          </div>
+          ${parsed.guidance.length ? `<h2>Guidance</h2><ul>${parsed.guidance.map((g) => `<li>${g.title}</li>`).join("")}</ul>` : ""}
+          ${parsed.concerns.length ? `<h2>Concerns</h2><ul>${parsed.concerns.map((c) => `<li>${c}</li>`).join("")}</ul>` : ""}
+          <p style="margin-top:32px;font-size:10px;color:#A1A1A1;border-top:1px solid #E5E5E5;padding-top:8px;">Generated by ProEval · ${item.id} · ${phaseLabel}</p>
         </body>
         </html>
       `;
 
-      const blob = new Blob(['\ufeff', content], { type: 'application/msword' });
+      const blob = new Blob(["\ufeff", content], { type: "application/msword" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `ProEval_${phaseKey}_Report_${title.replace(/\s+/g, '_')}.doc`;
+      link.download = `ProEval_${phaseKey}_Report.doc`;
       document.body.appendChild(link);
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
     };
 
-    const verdictColor = 
-      parsed.verdict.label === "APPROVE" || parsed.verdict.label === "PASS" || parsed.verdict.label === "ON_TRACK" ? "text-green-600 border-green-200 bg-green-50" :
-      parsed.verdict.label === "REFINE" || parsed.verdict.label === "REVIEW" || parsed.verdict.label === "AT_RISK" ? "text-orange-600 border-orange-200 bg-orange-50" :
-      "text-red-600 border-red-200 bg-red-50";
-
     return (
-      <div className="space-y-10">
-        {phaseKey === "INTERVIEW" && (
-           <div className="bg-violet-50 border-2 border-violet-200 rounded-[2rem] p-8 flex items-center gap-6 mb-6">
-              <div className="h-16 w-16 rounded-full bg-violet-600 flex items-center justify-center shrink-0">
-                 <Mic className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                 <h3 className="text-xl font-bold text-violet-900">Conversational AI Assessment</h3>
-                 <p className="text-violet-700/80">This evaluation combines your technical responses with behavioral telemetry from the live viva session.</p>
-              </div>
-           </div>
-        )}
-        <div className="grid gap-8 xl:grid-cols-[1.3fr_0.95fr]">
-        <section className="space-y-6">
-          <div className={`relative overflow-hidden rounded-[2rem] border-2 p-10 shadow-xl ${verdictColor}`}>
-            <div className="absolute top-0 right-0 p-8 opacity-5 text-slate-900">
-              <Sparkles className="h-64 w-64" />
-            </div>
-            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-10">
-              <div className="space-y-6 max-w-2xl">
-                <div className="flex items-center gap-4">
-                  <span className="text-muted-foreground font-black text-[10px] uppercase tracking-widest">
-                    {phaseKey === "PHASE_2" ? "Mentor Progress Review" : phaseKey === "INTERVIEW" ? "Viva Assessment" : "AI Mentorship Report"}
-                  </span>
-                </div>
-                <h2 className="text-4xl md:text-5xl font-black text-slate-900 leading-[1.1] tracking-tight">
-                  {projectTitle}
-                </h2>
-                <p className="text-xl text-slate-700 font-medium leading-relaxed">
-                  &ldquo;{parsed.verdict.summary}&rdquo;
-                </p>
-              </div>
-
-              <div className="flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm rounded-[2rem] p-8 border shadow-sm min-w-[200px]">
-                <span className="text-base font-bold text-slate-900">Detailed AI Feedback</span>
-                <p className="mt-4 text-sm leading-6 text-slate-600">Open the panel to view the full report and roadmap.</p>
-              </div>
-            </div>
+      <div className="space-y-8">
+        {/* Verdict */}
+        <section className="rounded-xl border border-border bg-card">
+          <div className="border-b border-border px-6 py-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{phaseLabel}</p>
+            <h2 className="mt-2 text-2xl font-bold tracking-tight text-foreground">{projectTitle}</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">“{parsed.verdict.summary || "Evaluation completed."}”</p>
           </div>
-
-          <Card className="border border-slate-200 bg-white">
-            <CardContent className="p-8 space-y-6">
-              <div className="space-y-3">
-                <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Overview</p>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  {parsed.verdict.summary || "The AI evaluation has been generated and is available in the report panel."}
-                </p>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-1">
-                <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
-                  <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Open report panel</p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">Full AI mentorship is available in the side canvas.</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="flex flex-col gap-4 px-6 py-5 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-3">
+              <Badge variant="outline" className="border-border font-mono text-xs font-medium">
+                {parsed.verdict.label}
+              </Badge>
+              <span className="text-sm text-muted-foreground">
+                Score <span className="font-medium text-foreground">{parsed.verdict.score}/100</span>
+              </span>
+              <span className="hidden text-xs text-muted-foreground md:inline">· {formattedDate}</span>
+            </div>
+            <Button size="sm" variant="outline" onClick={downloadReport} className="h-8 w-fit gap-1.5 text-xs">
+              <Download className="h-3.5 w-3.5" /> Download report
+            </Button>
+          </div>
         </section>
 
-        <section className="space-y-6">
-          <div className="sticky top-6 rounded-[2rem] border border-slate-200 bg-slate-50 shadow-sm overflow-hidden">
-            <div className="flex flex-col gap-4 border-b border-slate-200 bg-white px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Detailed report</p>
-                <h2 className="text-2xl font-black text-slate-900">{phaseLabel} Canvas</h2>
-              </div>
-              <Button size="sm" className="inline-flex items-center gap-2" onClick={downloadReport}>
-                <Download className="h-4 w-4" /> Download
-              </Button>
-            </div>
-            <div className="space-y-6 p-6">
-              {/* Global Verdict Summary */}
-              <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <p className="text-xs uppercase tracking-[0.24em] text-slate-500 mb-2">Evaluation Summary</p>
-                <div className="flex items-center gap-3 mb-4">
-                  <Badge variant="outline" className={`text-sm font-bold ${verdictColor}`}>
-                    {parsed.verdict.label}
-                  </Badge>
-                  <span className="text-sm font-bold text-slate-900">Score: {parsed.verdict.score}/100</span>
-                </div>
-                <p className="text-sm leading-7 text-slate-600 italic">"{parsed.verdict.summary || "AI analysis completed."}"</p>
-              </div>
+        <div className="grid gap-6 lg:grid-cols-[1.2fr_0.9fr]">
+          <div className="space-y-6">
+            <Card className="border border-border bg-card">
+              <CardContent className="space-y-4 p-6">
+                <h3 className="text-sm font-semibold tracking-tight text-foreground">Overview</h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">{parsed.verdict.summary || "Evaluation available. See detailed sections for guidance."}</p>
+              </CardContent>
+            </Card>
 
-              {/* Phase 1 Specialized Multi-Agent Output */}
-              {phaseKey === "PHASE_1" ? (
-                <div className="space-y-6">
-                  {/* Ideator Agent Section */}
-                  {item.agent_logs?.some((l: any) => l.agent === "Ideator") && (
-                    <div className="rounded-3xl border-2 border-sky-100 bg-sky-50/30 p-6 shadow-sm">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 rounded-xl bg-sky-600 text-white">
-                          <Lightbulb className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-black text-sky-900 leading-tight">Ideator Mentorship</h3>
-                          <p className="text-[10px] font-bold text-sky-600 uppercase tracking-widest">Concept & Feasibility</p>
-                        </div>
-                      </div>
-                      
-                      {(() => {
-                        const log = item.agent_logs.find((l: any) => l.agent === "Ideator");
-                        return (
-                          <div className="space-y-4">
-                            <div className="rounded-2xl bg-white/80 p-4 border border-sky-100">
-                              <p className="text-sm leading-relaxed text-slate-700">{log.reasoning}</p>
-                            </div>
-                            {log.findings?.length > 0 && (
-                              <div className="space-y-2">
-                                <h4 className="text-[10px] font-black uppercase tracking-widest text-sky-800">Key Observations</h4>
-                                <ul className="space-y-1.5">
-                                  {log.findings.map((f: string, i: number) => (
-                                    <li key={i} className="text-xs text-slate-600 flex items-start gap-2">
-                                      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-sky-400" />
-                                      {f}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  )}
-
-                  {/* Architect Agent Section */}
-                  {item.agent_logs?.some((l: any) => l.agent === "Architect") ? (
-                    <div className="rounded-3xl border-2 border-violet-100 bg-violet-50/30 p-6 shadow-sm">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 rounded-xl bg-violet-600 text-white">
-                          <Target className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-black text-violet-900 leading-tight">Architect Review</h3>
-                          <p className="text-[10px] font-bold text-violet-600 uppercase tracking-widest">Technical Implementation</p>
-                        </div>
-                      </div>
-                      
-                      {(() => {
-                        const log = item.agent_logs.find((l: any) => l.agent === "Architect");
-                        return (
-                          <div className="space-y-4">
-                            <div className="rounded-2xl bg-white/80 p-4 border border-violet-100">
-                              <p className="text-sm leading-relaxed text-slate-700">{log.reasoning}</p>
-                            </div>
-                            {log.recommendations?.length > 0 && (
-                              <div className="space-y-2">
-                                <h4 className="text-[10px] font-black uppercase tracking-widest text-violet-800">Technical Guidance</h4>
-                                <ul className="space-y-1.5">
-                                  {log.recommendations.map((r: string, i: number) => (
-                                    <li key={i} className="text-xs text-slate-600 flex items-start gap-2">
-                                      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-violet-400" />
-                                      {r}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  ) : (
-                    <div className="rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-8 text-center">
-                      <Users className="h-8 w-8 text-slate-300 mx-auto mb-3" />
-                      <h4 className="text-sm font-bold text-slate-500">Architect Review Pending</h4>
-                      <p className="text-[10px] text-slate-400 max-w-[200px] mx-auto mt-1">
-                        Triggered automatically once your team is fully formed (Leader + 2 Members).
+            {phaseKey === "PHASE_1" ? (
+              <div className="space-y-4">
+                {item.agent_logs?.some((l) => l.agent === "Ideator") && (
+                  <Card className="border border-border bg-card">
+                    <CardContent className="space-y-4 p-6">
+                      <h3 className="text-sm font-semibold tracking-tight text-foreground">Concept review</h3>
+                      <p className="text-sm leading-relaxed text-muted-foreground">
+                        {(item.agent_logs.find((l) => l.agent === "Ideator")?.reasoning as string) || ""}
                       </p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                /* Standard Narrative for other phases */
-                <div className="rounded-3xl border border-slate-200 bg-white p-6">
-                  <p className="text-sm font-black uppercase tracking-[0.24em] text-slate-500 mb-4">AI formatted output</p>
-                  <div className="prose prose-slate max-w-none text-sm leading-7 text-slate-700">
+                    </CardContent>
+                  </Card>
+                )}
+                {item.agent_logs?.some((l) => l.agent === "Architect") ? (
+                  <Card className="border border-border bg-card">
+                    <CardContent className="space-y-4 p-6">
+                      <h3 className="text-sm font-semibold tracking-tight text-foreground">Technical review</h3>
+                      <p className="text-sm leading-relaxed text-muted-foreground">
+                        {(item.agent_logs.find((l) => l.agent === "Architect")?.reasoning as string) || ""}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-border bg-muted/20 px-6 py-8 text-center">
+                    <p className="text-sm font-medium text-muted-foreground">Technical review pending</p>
+                    <p className="mx-auto mt-1 max-w-xs text-xs leading-relaxed text-muted-foreground">Available once the team is complete.</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Card className="border border-border bg-card">
+                <CardContent className="p-6">
+                  <div className="prose prose-sm max-w-none text-sm leading-relaxed text-foreground prose-p:text-muted-foreground">
                     <div dangerouslySetInnerHTML={{ __html: item.ai_narrative }} />
                   </div>
-                </div>
-              )}
-
-              {parsed.guidance.length > 0 && (
-                <div className="rounded-3xl border border-slate-200 bg-white p-6">
-                  <div className="flex items-center gap-3 mb-4 text-slate-900">
-                    <Lightbulb className="h-5 w-5 text-orange-600" />
-                    <h3 className="text-base font-black">Guidance</h3>
-                  </div>
-                  <div className="space-y-3">
-                    {parsed.guidance.map((item, idx) => (
-                      <div key={idx} className="rounded-3xl bg-slate-50 p-4">
-                        <p className="text-sm font-semibold text-slate-900">{item.title}</p>
-                        {item.description ? <p className="mt-2 text-sm text-slate-600">{item.description}</p> : null}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {parsed.concerns.length > 0 && (
-                <div className="rounded-3xl border border-slate-200 bg-white p-6">
-                  <div className="flex items-center gap-3 mb-4 text-slate-900">
-                    <ShieldAlert className="h-5 w-5 text-red-600" />
-                    <h3 className="text-base font-black">Critical Risks</h3>
-                  </div>
-                  <div className="space-y-3">
-                    {parsed.concerns.map((concern, idx) => (
-                      <div key={idx} className="rounded-3xl bg-slate-50 p-4">
-                        <p className="text-sm font-semibold text-slate-900">{concern}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {parsed.clarificationAnswers.length > 0 && (
-                <div className="rounded-3xl border border-slate-200 bg-white p-6">
-                  <div className="flex items-center gap-3 mb-4 text-slate-900">
-                    <Users className="h-5 w-5 text-blue-600" />
-                    <h3 className="text-base font-black">Clarification Feedback</h3>
-                  </div>
-                  <div className="space-y-3">
-                    {parsed.clarificationAnswers.map((answer: string, idx: number) => (
-                      <div key={idx} className="rounded-3xl bg-slate-50 p-4 text-sm text-slate-700">
-                        <span className="block text-xs uppercase tracking-[0.2em] text-slate-500 mb-2">Answer {idx + 1}</span>
-                        <p>{answer}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {parsed.roadmap.length > 0 && (
-                <div className="rounded-3xl border border-slate-200 bg-white p-6">
-                  <div className="flex items-center gap-3 mb-4 text-slate-900">
-                    <CalendarDays className="h-5 w-5 text-indigo-600" />
-                    <h3 className="text-base font-black">Execution Roadmap</h3>
-                  </div>
-                  <RoadmapTimeline
-                    items={parsed.roadmap}
-                    selectedIndex={selectedRoadmapIndex}
-                    onSelect={(index) => setSelectedRoadmapIndex(index)}
-                  />
-                  {roadmapItem && (
-                    <div className="mt-6 rounded-3xl border border-slate-100 bg-slate-50 p-5">
-                      <p className="text-xs uppercase tracking-[0.24em] text-slate-500 mb-2">Selected step</p>
-                      <p className="text-sm font-semibold text-slate-900">{roadmapItem.title || roadmapItem.period}</p>
-                      {roadmapItem.description ? (
-                        <p className="mt-2 text-sm text-slate-600">{roadmapItem.description}</p>
-                      ) : null}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-      </div>
-
-        <div className="pt-8 border-t flex flex-col md:flex-row justify-between items-center gap-4 text-muted-foreground text-xs">
-           <div className="flex items-center gap-2">
-              <Badge variant="outline" className="font-mono">{item.id.split('-')[0]}</Badge>
-              <span>Generated on {formattedDate}</span>
-           </div>
-           <div className="flex items-center gap-1">
-              <span>Evaluation Phase:</span>
-              <span className="font-bold text-slate-900">{phaseLabel}</span>
-           </div>
-        </div>
-        {item.agent_logs && (
-          <div className="mt-4">
-            <Button size="sm" variant="outline" onClick={() => setRawOpenFor(rawOpenFor === item.id ? null : item.id)}>
-              {rawOpenFor === item.id ? 'Hide raw agent log' : 'View raw agent log'}
-            </Button>
-            {rawOpenFor === item.id && (
-              <div className="mt-3 p-4 bg-black/5 rounded-md overflow-auto">
-                <pre className="text-xs font-mono whitespace-pre-wrap break-words text-slate-800">{JSON.stringify(item.agent_logs, null, 2)}</pre>
-              </div>
+                </CardContent>
+              </Card>
             )}
           </div>
-        )}
+
+          <div className="space-y-6">
+            <Card className="border border-border bg-card">
+              <CardContent className="space-y-6 p-6">
+                {parsed.guidance.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold tracking-tight text-foreground">Guidance</h3>
+                    <ul className="space-y-2">
+                      {parsed.guidance.map((g, idx) => (
+                        <li key={idx} className="rounded-lg border border-border bg-muted/20 px-3 py-2.5 text-sm leading-relaxed text-foreground">
+                          {g.title}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {parsed.concerns.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold tracking-tight text-foreground">Risks</h3>
+                    <ul className="space-y-2">
+                      {parsed.concerns.map((c, idx) => (
+                        <li key={idx} className="rounded-lg border border-border bg-muted/20 px-3 py-2.5 text-sm leading-relaxed text-foreground">
+                          {c}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {parsed.clarificationAnswers.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold tracking-tight text-foreground">Clarification feedback</h3>
+                    <ul className="space-y-2">
+                      {parsed.clarificationAnswers.map((a: string, idx: number) => (
+                        <li key={idx} className="rounded-lg border border-border bg-muted/20 px-3 py-2.5 text-sm leading-relaxed text-foreground">
+                          <span className="mb-1 block text-xs font-semibold uppercase tracking-widest text-muted-foreground">Answer {idx + 1}</span>
+                          {a}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {parsed.roadmap.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold tracking-tight text-foreground">Roadmap</h3>
+                    <RoadmapTimeline items={parsed.roadmap} selectedIndex={selectedRoadmapIndex} onSelect={setSelectedRoadmapIndex} />
+                    {roadmapItem && (
+                      <div className="rounded-lg border border-border bg-muted/20 p-4">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{roadmapItem.period}</p>
+                        <p className="mt-1 text-sm font-medium text-foreground">{roadmapItem.title}</p>
+                        {roadmapItem.description && <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{roadmapItem.description}</p>}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between border-t border-border pt-4 text-xs text-muted-foreground">
+                  <span className="font-mono">{item.id.slice(0, 8)}</span>
+                  <span>{phaseLabel}</span>
+                </div>
+                <Button size="sm" variant="ghost" className="h-7 w-full justify-center text-xs" onClick={() => setRawOpenFor(rawOpenFor === item.id ? null : item.id)}>
+                  {rawOpenFor === item.id ? "Hide details" : "View details"}
+                </Button>
+                {rawOpenFor === item.id && (
+                  <pre className="max-h-64 overflow-auto rounded-lg border border-border bg-muted/30 p-3 text-xs leading-relaxed text-foreground">
+                    {JSON.stringify(item.agent_logs, null, 2)}
+                  </pre>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     );
   };
 
   if (!authLoading && !user) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-        <p className="text-lg font-medium">Please log in to view your feedback.</p>
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3">
+        <p className="text-sm text-muted-foreground">Please log in to view feedback.</p>
       </div>
     );
   }
@@ -700,43 +520,67 @@ export default function StudentFeedbackPage() {
   const tabs = [
     { key: "PHASE_1", label: "Phase 1", show: true },
     { key: "PHASE_2", label: "Phase 2", show: isTestUser || !!project?.phase_2_data || !!evaluations.PHASE_2 },
-    { key: "FINAL", label: "Final Audit", show: isTestUser || !!project?.final_data || !!evaluations.FINAL },
-    { key: "INTERVIEW", label: "AI Viva", show: isTestUser || !!evaluations.INTERVIEW },
-  ].filter((tab) => tab.show);
+    { key: "FINAL", label: "Final", show: isTestUser || !!project?.final_data || !!evaluations.FINAL },
+    { key: "INTERVIEW", label: "Viva", show: isTestUser || !!evaluations.INTERVIEW },
+  ].filter((t) => t.show);
 
   return (
-    <main className="container mx-auto px-4 py-12 max-w-6xl">
-      <div className="space-y-8">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-4xl font-extrabold tracking-tight">Mentorship Feedback</h1>
-          <p className="text-muted-foreground">Actionable insights generated by ProEval AI to help your project succeed.</p>
+    <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8 md:py-12">
+      <div className="space-y-8 md:space-y-10">
+        <StudentJourneyBanner
+          currentPhase={project?.current_phase || "NO_TEAM"}
+          isLeader={isLeader}
+          latestStatus={(projectData as { latest_evaluation_status?: string })?.latest_evaluation_status}
+          hasTeam={!!project}
+        />
+
+        <div className="space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Feedback</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">Mentorship & Feedback</h1>
+          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
+            Structured evaluation of your proposal, architecture and Viva — with clear next steps.
+          </p>
         </div>
 
-        {error && <div className="p-4 bg-red-50 border border-red-200 rounded-md text-red-800 flex items-center gap-2"><AlertCircle className="w-4 h-4" /> {error}</div>}
+        {error && (
+          <div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4" /> {error}
+          </div>
+        )}
 
         <Tabs defaultValue="PHASE_1" className="w-full">
-          <TabsList className={`grid w-full h-14 bg-slate-100/50 p-1 border rounded-2xl ${
-            tabs.length === 1 ? "grid-cols-1" : 
-            tabs.length === 2 ? "grid-cols-2" : 
-            tabs.length === 3 ? "grid-cols-3" : "grid-cols-4"
-          }`}>
-            {tabs.map((tab) => (
-              <TabsTrigger key={tab.key} value={tab.key} className="text-sm font-black uppercase tracking-widest rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                {tab.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+          <div className="border-b border-border">
+            <TabsList className="h-auto justify-start gap-6 bg-transparent p-0">
+              {tabs.map((tab) => (
+                <TabsTrigger
+                  key={tab.key}
+                  value={tab.key}
+                  className="rounded-none border-b-2 border-transparent bg-transparent px-1 py-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground shadow-none data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                >
+                  {tab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
 
-          <div className="mt-12">
-            <TabsContent value="PHASE_1" className="outline-none">{renderPhaseFeedback("PHASE_1", "Initial Proposal")}</TabsContent>
-            {tabs.some((tab) => tab.key === "PHASE_2") && (
-              <TabsContent value="PHASE_2" className="outline-none">{renderPhaseFeedback("PHASE_2", "Mid-term Build")}</TabsContent>
+          <div className="pt-8">
+            <TabsContent value="PHASE_1" className="mt-0 outline-none">
+              {renderPhaseFeedback("PHASE_1", "Proposal")}
+            </TabsContent>
+            {tabs.some((t) => t.key === "PHASE_2") && (
+              <TabsContent value="PHASE_2" className="mt-0 outline-none">
+                {renderPhaseFeedback("PHASE_2", "Architecture")}
+              </TabsContent>
             )}
-            {tabs.some((tab) => tab.key === "FINAL") && (
-              <TabsContent value="FINAL" className="outline-none">{renderPhaseFeedback("FINAL", "Final Evaluation")}</TabsContent>
+            {tabs.some((t) => t.key === "FINAL") && (
+              <TabsContent value="FINAL" className="mt-0 outline-none">
+                {renderPhaseFeedback("FINAL", "Final Review")}
+              </TabsContent>
             )}
-            {tabs.some((tab) => tab.key === "INTERVIEW") && (
-              <TabsContent value="INTERVIEW" className="outline-none">{renderPhaseFeedback("INTERVIEW", "Technical Viva")}</TabsContent>
+            {tabs.some((t) => t.key === "INTERVIEW") && (
+              <TabsContent value="INTERVIEW" className="mt-0 outline-none">
+                {renderPhaseFeedback("INTERVIEW", "Viva")}
+              </TabsContent>
             )}
           </div>
         </Tabs>

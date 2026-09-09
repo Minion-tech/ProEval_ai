@@ -49,16 +49,16 @@ const EMPTY_FINAL: FinalData = {
 function getStatusTone(status?: string | null) {
   switch (status) {
     case "COMPLETED":
-      return "bg-green-50 text-green-700 border-green-200";
+      return "bg-emerald-50 text-emerald-700 border-emerald-200";
     case "AWAITING_CLARIFICATION":
-      return "bg-orange-50 text-orange-700 border-orange-200";
+      return "bg-orange-50 text-foreground border-border";
     case "FAILED":
-      return "bg-red-50 text-red-700 border-red-200";
+      return "bg-destructive/10 text-destructive border-destructive/20";
     case "IN_PROGRESS":
     case "PENDING":
       return "bg-blue-50 text-blue-700 border-blue-200";
     default:
-      return "bg-slate-50 text-slate-600 border-slate-200";
+      return "bg-muted text-muted-foreground border-border";
   }
 }
 
@@ -317,8 +317,8 @@ export default function TestUserWorkspace() {
         </div>
       </div>
 
-      {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
-      {success && <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{success}</div>}
+      {error && <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div>}
+      {success && <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</div>}
 
       <Card className="border-2 border-primary/10 shadow-sm">
         <CardHeader className="bg-primary/5">
@@ -342,7 +342,7 @@ export default function TestUserWorkspace() {
             <Badge variant="outline" className={getStatusTone(phase1Status)}>Phase 1: {phase1Status}</Badge>
             <Badge variant="outline" className={getStatusTone(phase2Status)}>Phase 2: {phase2Status}</Badge>
             <Badge variant="outline" className={getStatusTone(finalStatus)}>Final: {finalStatus}</Badge>
-            <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200">
+            <Badge variant="outline" className="bg-muted text-foreground border-border">
               Members: {projectData?.member_count ?? 0}
             </Badge>
           </div>
@@ -440,7 +440,7 @@ export default function TestUserWorkspace() {
               </div>
               <div className="space-y-2">
                 {scenario.members.map((member) => (
-                  <div key={member.name} className="rounded-lg border bg-slate-50 px-3 py-2">
+                  <div key={member.name} className="rounded-lg border bg-muted px-3 py-2">
                     <p className="text-sm font-semibold">{member.name}</p>
                     <p className="text-xs text-muted-foreground">{member.role}</p>
                   </div>

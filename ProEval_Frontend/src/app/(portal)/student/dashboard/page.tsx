@@ -4,19 +4,25 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { projectService, type MyProjectResponse } from "@/lib/project-service";
 import { isTestUserEmail } from "@/lib/portal-mode";
-import { AlertTriangle, ArrowRight, HelpCircle, Loader2, Mic, RefreshCw, Sparkles, Trash2, Users } from "lucide-react";
-import { toast } from "sonner";
+import { StudentJourneyBanner } from "@/components/common/StudentJourneyBanner";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Loader2,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
 
 interface Proposal {
   id: string;
   team_id: string;
   attempt_number: number;
-  phase_1_data: any;
+  phase_1_data: unknown;
   evaluation_status: string;
   evaluation_summary: string;
 }
@@ -39,12 +45,12 @@ export default function StudentDashboardPage() {
 
       if (isTestUser) {
         const proposalsRes = await projectService.getMyProposals({ testMode: true });
-        setProposals(proposalsRes.data?.proposals || []);
+        setProposals((proposalsRes.data?.proposals as Proposal[]) || []);
       } else {
         setProposals([]);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load dashboard data.");
+      setError(err instanceof Error ? err.message : "We couldn't load your project details. Please check your connection or try again.");
     } finally {
       setLoading(false);
     }
@@ -68,263 +74,357 @@ export default function StudentDashboardPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">Loading workspace</p>
       </div>
     );
   }
 
   const activeProject = projectData?.project ?? null;
+  const isLeader = projectData?.user_role === "Leader / Product Manager" || activeProject?.leader_id === user?.id;
+  const currentPhaseRaw = activeProject?.current_phase || "NO_TEAM";
+
+  let humanPhase = "Team Setup Needed";
+  let phaseDescription = "Create or join a team to start your project workflow.";
+  let primaryCtaText = "Start Team Setup";
+  let primaryCtaHref = "/student/team";
+
+  if (activeProject) {
+    const rawP = currentPhaseRaw.toLowerCase();
+    if (rawP.includes("final") || rawP.includes("completed")) {
+      humanPhase = "Phase 3 — Final Showcase & Viva";
+      phaseDescription = "Submissions are complete. The final Technical Viva is ready when you are.";
+      primaryCtaText = "Start Technical Viva";
+      primaryCtaHref = `/student/interview/${activeProject.id}`;
+    } else if (rawP.includes("phase_2") || rawP.includes("phase 2")) {
+      humanPhase = "Phase 2 — Architecture & Code";
+      phaseDescription = isLeader
+        ? "Phase 1 reviewed. Submit your repository, presentation and progress notes."
+        : "Phase 1 complete. Review shared feedback or check Phase 2 progress.";
+      primaryCtaText = isLeader ? "Submit Phase 2" : "View Feedback";
+      primaryCtaHref = isLeader ? "/student/submit/phase2" : "/student/feedback";
+    } else {
+      if (projectData?.latest_evaluation_status === "AWAITING_CLARIFICATION") {
+        humanPhase = "Phase 1 — Clarification Needed";
+        phaseDescription = "A few clarifying questions are waiting before evaluation can be finalized.";
+        primaryCtaText = "Answer Questions";
+        primaryCtaHref = "/student/submit/phase1";
+      } else {
+        humanPhase = "Phase 1 — Project Proposal";
+        phaseDescription = isLeader
+          ? "Submit your title, abstract, methodology and tech stack for review."
+          : "Your leader will submit Phase 1. You can review the team and shared feedback in the meantime.";
+        primaryCtaText = isLeader ? "Submit Phase 1" : "View Team";
+        primaryCtaHref = isLeader ? "/student/submit/phase1" : "/student/my-team";
+      }
+    }
+  }
 
   return (
-    <main className="container mx-auto max-w-6xl px-4 py-12">
-      <div className="space-y-8">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-4xl font-extrabold tracking-tight">
-              {isTestUser ? "Pipeline Dashboard" : "Student Dashboard"}
-            </h1>
-            <p className="mt-1 text-muted-foreground">
-              {isTestUser
-                ? "Track the active test project, reset the workspace, and jump back into the end-to-end evaluation journey."
-                : "See your active team, keep track of feedback, and move through the project phases with your group."}
+    <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8 md:py-12">
+      <div className="space-y-10 md:space-y-12">
+        {/* Header */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Dashboard
             </p>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+              {isTestUser ? "Testing Workspace" : "Project Home"}
+            </h1>
+            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
+              {isTestUser
+                ? "Validate the full evaluation pipeline in an isolated workspace."
+                : "Track progress, understand what matters now, and take the next step."}
+            </p>
+            {!isTestUser && user?.name && (
+              <p className="text-sm text-muted-foreground">
+                Signed in as <span className="font-medium text-foreground">{user.name}</span>
+              </p>
+            )}
           </div>
-          <Button variant="outline" size="sm" onClick={fetchData}>
-            <RefreshCw className="mr-2 h-4 w-4" />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={fetchData}
+            className="h-8 self-start gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
             Refresh
           </Button>
         </div>
 
         {error && (
-          <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700">
-            <AlertTriangle className="h-5 w-5" />
-            {error}
+          <div className="flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <p className="flex-1 leading-relaxed">{error}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchData}
+              className="h-7 shrink-0 border-destructive/20 bg-background text-xs"
+            >
+              Retry
+            </Button>
           </div>
         )}
 
-        <Card className="border-2 border-primary/10 shadow-sm">
-          <CardHeader className="bg-primary/5">
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div>
-                <CardTitle className="text-2xl">
-                  {activeProject?.phase_1_data?.title || (isTestUser ? "No active test project" : "No active project yet")}
-                </CardTitle>
-                <CardDescription>
-                  {activeProject
-                    ? `Team ID: ${activeProject.team_id} • Phase: ${activeProject.current_phase}`
-                    : isTestUser
-                      ? "Use the team workspace to create a scenario-backed project and run the full pipeline."
-                      : "Create a team or join an existing project to start your evaluation journey."}
-                </CardDescription>
+        <StudentJourneyBanner
+          currentPhase={currentPhaseRaw}
+          isLeader={isLeader}
+          latestStatus={projectData?.latest_evaluation_status ?? undefined}
+          hasTeam={!!activeProject}
+        />
+
+        {/* Primary Next Step */}
+        <section className="rounded-xl border border-border bg-card">
+          <div className="px-5 py-6 md:px-8 md:py-8">
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Next step
+                </p>
+                <h2 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">
+                  {humanPhase}
+                </h2>
+                <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
+                  {phaseDescription}
+                </p>
               </div>
-              {activeProject && isTestUser ? (
-                <Button variant="destructive" size="sm" onClick={() => handleDelete(activeProject.id)}>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete / Reset
+
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  asChild
+                  className="group h-9 gap-1.5 bg-primary px-5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+                >
+                  <Link href={primaryCtaHref} className="inline-flex items-center gap-1.5">
+                    {primaryCtaText}
+                    <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+                  </Link>
                 </Button>
-              ) : null}
-            </div>
-          </CardHeader>
-          <CardContent className="pt-6">
-            {!activeProject && projectData?.previous_projects?.some((p: any) => p.deleted_by_admin) && (
-              <div className="mb-6 flex items-center gap-3 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-orange-800">
-                <AlertTriangle className="h-5 w-5 shrink-0" />
-                <p className="text-sm font-medium">Your previous project was deleted by the Project Coordinator. You can start a new team setup below.</p>
-              </div>
-            )}
-            
-            {activeProject ? (
-              <div className="space-y-5">
-                <div className="flex flex-wrap gap-3">
-                  <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200">
-                    Team: {activeProject.team_id}
-                  </Badge>
-                  <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200">
-                    Current phase: {activeProject.current_phase}
-                  </Badge>
-                  <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200">
-                    Members: {projectData?.member_count ?? 0}
-                  </Badge>
-                </div>
-                <div className="flex flex-wrap gap-3">
-                  <Button onClick={() => router.push(isTestUser ? "/student/team" : "/student/my-team")}>
-                    {isTestUser ? "Open Team Workspace" : "Open My Team"}
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" asChild>
+
+                {activeProject ? (
+                  <Button variant="outline" asChild className="h-9 text-sm">
                     <Link href="/student/feedback">View Feedback</Link>
                   </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-3">
-                <Button onClick={() => router.push("/student/team")}>
-                  {isTestUser ? "Open Team Workspace" : "Start Team Setup"}
-                </Button>
-                {!isTestUser && (
-                  <Button variant="outline" asChild>
-                    <Link href="/student/team/join">Join Existing Team</Link>
+                ) : (
+                  <Button variant="outline" asChild className="h-9 text-sm">
+                    <Link href="/student/team/join">Join with Team ID</Link>
+                  </Button>
+                )}
+
+                {activeProject && isTestUser && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(activeProject.id)}
+                    className="ml-auto h-8 gap-1.5 text-xs text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Reset
                   </Button>
                 )}
               </div>
-            )}
-          </CardContent>
-        </Card>
 
-        {/* Dynamic Alerts Section */}
-        {activeProject && (
-          <div className="space-y-4">
-            {/* Leader: Clarification Alert */}
-            {projectData?.user_role === "Leader / Product Manager" && 
-             projectData?.latest_evaluation_status === "AWAITING_CLARIFICATION" && (
-              <div className="flex items-center gap-4 rounded-2xl border-2 border-orange-200 bg-orange-50 p-6 shadow-sm">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-600 text-white">
-                  <HelpCircle className="h-6 w-6" />
+              {activeProject && (
+                <div className="flex flex-wrap gap-x-6 gap-y-2 border-t border-border pt-6 text-xs">
+                  <span className="text-muted-foreground">
+                    Team <span className="font-mono font-medium text-foreground">{activeProject.team_id}</span>
+                  </span>
+                  <span className="text-muted-foreground">
+                    Role <span className="font-medium text-foreground">{isLeader ? "Leader" : "Member"}</span>
+                  </span>
+                  <span className="text-muted-foreground">
+                    Phase <span className="font-medium text-foreground">{currentPhaseRaw.replace(/_/g, " ")}</span>
+                  </span>
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-orange-900">Clarification Needed</h3>
-                  <p className="text-sm text-orange-700">The AI Mentor has questions about your proposal. Answer them to continue.</p>
-                </div>
-                <Button className="bg-orange-600 hover:bg-orange-700" onClick={() => router.push("/student/submit/phase1")}>
-                  Answer Questions
-                </Button>
-              </div>
-            )}
-
-            {/* Teammate: Welcome & Feedback Alert */}
-            {projectData?.user_role !== "Leader / Product Manager" && 
-             projectData?.members?.some(m => m.email === user?.email && !m.has_viewed_feedback) && (
-              <div className="flex items-center gap-4 rounded-2xl border-2 border-blue-200 bg-blue-50 p-6 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
-                  <Sparkles className="h-6 w-6" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-blue-900">Welcome to the Team!</h3>
-                  <p className="text-sm text-blue-700">The AI Ideator has already analyzed the project. Review the mentorship to align with the team.</p>
-                </div>
-                <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => router.push("/student/feedback")}>
-                  View AI Feedback
-                </Button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        )}
+        </section>
 
-        {activeProject && 
-         (activeProject.current_phase === "FINAL" || activeProject.current_phase === "ProjectPhase.FINAL") && (
-          <Card className="border-2 border-indigo-500/20 bg-indigo-50/30 dark:bg-indigo-900/10">
-            <CardHeader>
-              <div className="flex items-center space-x-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-500 text-white">
-                  <Mic className="h-4 w-4" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg text-indigo-900 dark:text-indigo-300">Final Step: AI Technical Viva</CardTitle>
-                  <CardDescription>
-                    {projectData?.latest_evaluation_status === "COMPLETED" 
-                      ? "All evaluation phases are complete. You are now invited to your final interview."
-                      : "Your final project audit is in progress. You can start your interview now or wait for the audit results."}
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-                <p className="text-sm text-indigo-700/80 dark:text-indigo-400/80 max-w-xl">
-                  This 5-minute conversational session with our AI Evaluator will assess your technical depth, 
-                  contribution to the team, and communication skills.
+        {activeProject &&
+          projectData?.user_role === "Leader / Product Manager" &&
+          projectData?.latest_evaluation_status === "AWAITING_CLARIFICATION" && (
+            <div className="flex flex-col gap-4 rounded-xl border border-border bg-card px-5 py-5 md:flex-row md:items-center md:justify-between md:px-6">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Attention required
                 </p>
-                <div className="flex items-center gap-3">
-                  {projectData?.latest_evaluation_status === "IN_PROGRESS" && (
-                     <Badge variant="outline" className="animate-pulse bg-indigo-100 text-indigo-700 border-indigo-200">
-                        AI Audit Running...
-                     </Badge>
-                  )}
-                  <Button 
-                    onClick={() => {
-                      if (activeProject?.id) {
-                        router.push(`/student/interview/${activeProject.id}`);
-                      } else {
-                        toast.error("Project ID not found. Please refresh.");
-                      }
-                    }} 
-                    className="bg-indigo-600 hover:bg-indigo-700"
-                  >
-                    Start AI Interview
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
+                <h3 className="text-base font-semibold text-foreground">Clarification questions waiting</h3>
+                <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
+                  The reviewer needs three short answers to clarify scope before finalizing Phase 1.
+                </p>
               </div>
-            </CardContent>
-          </Card>
-        )}
+              <Button
+                className="h-9 shrink-0 bg-foreground px-5 text-sm font-semibold text-background hover:bg-foreground/90"
+                onClick={() => router.push("/student/submit/phase1")}
+              >
+                Answer Questions
+                <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
 
-        {isTestUser ? (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <h2 className="text-2xl font-bold">Recent Test Attempts</h2>
-              <Badge variant="outline">{proposals.length}</Badge>
+        {/* Status Overview — calm, divider-based */}
+        <section className="overflow-hidden rounded-xl border border-border bg-card">
+          <div className="grid grid-cols-1 divide-y divide-border sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x">
+            <div className="px-6 py-6">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Where you are</p>
+              <p className="mt-3 text-base font-semibold tracking-tight text-foreground">
+                {activeProject ? humanPhase.split(" — ")[0] : "Team Setup"}
+              </p>
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                {activeProject
+                  ? `${projectData?.member_count || 1} member · ${activeProject.team_id}`
+                  : "No team yet — create or join to begin."}
+              </p>
+            </div>
+            <div className="px-6 py-6">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Completed</p>
+              <ul className="mt-3 space-y-1.5 text-sm leading-relaxed">
+                <li className="flex items-center gap-2 text-foreground">
+                  <span className="h-1 w-1 rounded-full bg-foreground" /> Enrollment
+                </li>
+                <li className="flex items-center gap-2 text-muted-foreground">
+                  <span className={`h-1 w-1 rounded-full ${activeProject ? "bg-foreground" : "bg-border"}`} />
+                  Team Setup {activeProject ? "" : "— pending"}
+                </li>
+                <li className="flex items-center gap-2 text-muted-foreground">
+                  <span className={`h-1 w-1 rounded-full ${activeProject?.phase_1_data ? "bg-foreground" : "bg-border"}`} />
+                  Phase 1 Proposal {activeProject?.phase_1_data ? "" : "— pending"}
+                </li>
+              </ul>
+            </div>
+            <div className="px-6 py-6">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Up next</p>
+              <ul className="mt-3 space-y-1.5 text-sm text-muted-foreground">
+                {!activeProject?.phase_2_data && <li>Phase 2 — Architecture</li>}
+                {!activeProject?.final_data && <li>Phase 3 — Showcase</li>}
+                <li>Technical Viva</li>
+              </ul>
+            </div>
+            <div className="bg-muted/30 px-6 py-6">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">What to do now</p>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                {activeProject ? "Take the next step to move the project forward." : "Create or join a team to unlock the workflow."}
+              </p>
+              <Button asChild size="sm" className="mt-4 h-8 bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/90">
+                <Link href={primaryCtaHref}>{primaryCtaText}</Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        {/* Guidance — two quiet sections */}
+        <div className="grid gap-6 md:grid-cols-2">
+          <section className="rounded-xl border border-border bg-card">
+            <div className="border-b border-border px-6 py-4">
+              <h3 className="text-sm font-semibold tracking-tight text-foreground">Team workspace</h3>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">How leaders and members collaborate.</p>
+            </div>
+            <div className="space-y-4 px-6 py-6">
+              <div className="space-y-1.5">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Leader</p>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  Creates the team, submits all phase deliverables, and shares the Team ID.
+                </p>
+              </div>
+              <div className="h-px bg-border" />
+              <div className="space-y-1.5">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Member</p>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  Joins with Team ID, records contributions, and reviews shared feedback.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                className="mt-2 w-full h-9"
+                onClick={() => router.push(activeProject ? "/student/my-team" : "/student/team")}
+              >
+                {activeProject ? "Open Team Workspace" : "Start Team Setup"}
+                <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-border bg-card">
+            <div className="border-b border-border px-6 py-4">
+              <h3 className="text-sm font-semibold tracking-tight text-foreground">How evaluation works</h3>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Three phases, one Viva.</p>
+            </div>
+            <div className="px-6 py-6">
+              <ol className="space-y-4">
+                <li className="flex gap-3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border text-xs font-medium text-muted-foreground">
+                    1
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Phase 1 — Proposal</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Scope, originality and clarity. Clarification asked if needed.</p>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border text-xs font-medium text-muted-foreground">
+                    2
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Phase 2 — Architecture</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Repository structure, presentation and milestones.</p>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border text-xs font-medium text-muted-foreground">
+                    3
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Final & Viva</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Consolidated review plus 5-minute technical Viva.</p>
+                  </div>
+                </li>
+              </ol>
+              <Button variant="outline" className="mt-6 w-full h-9" onClick={() => router.push("/student/feedback")}>
+                View Feedback
+                <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </section>
+        </div>
+
+        {isTestUser && (
+          <section className="space-y-4 border-t border-border pt-8">
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold tracking-tight text-foreground">Recent test attempts</h2>
+              <Badge variant="outline" className="border-border font-mono text-xs">
+                {proposals.length}
+              </Badge>
             </div>
             {proposals.length === 0 ? (
-              <Card className="border-dashed border-2">
-                <CardContent className="py-10 text-center text-muted-foreground">
-                  No scenario-backed attempts yet. Create one from the team workspace.
-                </CardContent>
-              </Card>
+              <div className="rounded-xl border border-dashed border-border bg-muted/30 px-6 py-10 text-center">
+                <p className="text-sm text-muted-foreground">No test attempts yet. Create one from the team workspace.</p>
+              </div>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {proposals.map((proposal) => (
-                  <Card key={proposal.id} className="border">
-                    <CardHeader className="pb-3">
-                      <Badge variant="secondary" className="w-fit">Attempt #{proposal.attempt_number}</Badge>
-                      <CardTitle className="line-clamp-1 text-lg">{proposal.phase_1_data?.title}</CardTitle>
-                      <CardDescription>{proposal.team_id}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <Badge variant="outline">{proposal.evaluation_status || "PENDING"}</Badge>
-                      <p className="line-clamp-3 text-sm text-muted-foreground">
-                        {proposal.evaluation_summary || "Evaluation is still in progress."}
+                  <Card key={proposal.id} className="border border-border bg-card">
+                    <CardContent className="space-y-3 p-5">
+                      <p className="font-mono text-xs text-muted-foreground">{proposal.team_id} · Attempt #{proposal.attempt_number}</p>
+                      <p className="line-clamp-1 text-sm font-medium text-foreground">
+                        {(proposal.phase_1_data as { title?: string })?.title || "Untitled proposal"}
                       </p>
+                      <p className="line-clamp-3 text-xs leading-relaxed text-muted-foreground">
+                        {proposal.evaluation_summary || "Evaluation in progress."}
+                      </p>
+                      <Badge variant="outline" className="border-border text-xs">
+                        {proposal.evaluation_status || "PENDING"}
+                      </Badge>
                     </CardContent>
                   </Card>
                 ))}
               </div>
             )}
-          </div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Your Team Space</CardTitle>
-                <CardDescription>
-                  Leaders submit project phases. Members can join with a team ID and follow the shared feedback trail.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button className="w-full justify-between" onClick={() => router.push(activeProject ? "/student/my-team" : "/student/team")}>
-                  {activeProject ? "Go to My Team" : "Create or Join a Team"}
-                  <Users className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" className="w-full" onClick={() => router.push("/student/feedback")}>
-                  Open Shared Feedback
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">How the flow works</CardTitle>
-                <CardDescription>Keep the normal student portal focused on the academic workflow.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground">
-                <p>1. Leader creates the team and submits Phase 1.</p>
-                <p>2. Team members join with the shared team ID.</p>
-                <p>3. Everyone can see the ideator and architect feedback once it is ready.</p>
-                <p>4. Only the leader submits Phase 2 and Final deliverables.</p>
-              </CardContent>
-            </Card>
-          </div>
+          </section>
         )}
       </div>
     </main>

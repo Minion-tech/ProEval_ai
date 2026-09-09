@@ -156,8 +156,8 @@ export function EvaluationDetailModal({ open, projectId, evaluationId, projectTi
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="flex max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-lg border bg-background shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/50 p-4">
+      <div className="flex max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-lg border bg-background shadow-sm">
         <div className="flex items-start justify-between gap-4 border-b px-6 py-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">AI evaluation report</p>

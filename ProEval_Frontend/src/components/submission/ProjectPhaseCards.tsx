@@ -5,10 +5,9 @@ import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { isTestUserEmail } from "@/lib/portal-mode";
 import { projectService } from "@/lib/project-service";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Rocket, Terminal, Trophy, Mic, Lock, CheckCircle2, Loader2, Info } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 interface ProjectPhaseCardsProps {
   projectId: string;
@@ -19,26 +18,40 @@ interface ProjectPhaseCardsProps {
   isLeader: boolean;
 }
 
-interface EvalStatus {
-  status: string;
-}
-
-const getStatusDisplay = (status: string) => {
-  switch (status) {
-    case "COMPLETED":
-      return { label: "Completed", color: "bg-green-100 text-green-700 border-green-200" };
-    case "AWAITING_CLARIFICATION":
-      return { label: "Clarification Needed", color: "bg-orange-100 text-orange-700 border-orange-200" };
-    case "IN_PROGRESS":
-      return { label: "In Review", color: "bg-blue-100 text-blue-700 border-blue-200" };
-    case "AVAILABLE":
-      return { label: "Available", color: "bg-blue-50 text-blue-600 border-blue-100" };
-    case "LOCKED":
-      return { label: "Locked", color: "bg-gray-100 text-gray-500 border-gray-200" };
-    default:
-      return { label: "Not Started", color: "bg-gray-100 text-gray-600 border-gray-200" };
-  }
-};
+const phaseCopy = [
+  {
+    id: "phase1",
+    step: "01",
+    title: "Proposal",
+    what: "Define title, abstract, domain and methodology.",
+    why: "Sets scope and unlocks review.",
+    path: "/student/submit/phase1",
+  },
+  {
+    id: "phase2",
+    step: "02",
+    title: "Architecture",
+    what: "Repository, slides and milestones.",
+    why: "Evaluation of structure and progress.",
+    path: "/student/submit/phase2",
+  },
+  {
+    id: "final",
+    step: "03",
+    title: "Showcase",
+    what: "Report, demo and deliverables.",
+    why: "Final audit and Viva preparation.",
+    path: "/student/submit/final",
+  },
+  {
+    id: "interview",
+    step: "04",
+    title: "Viva",
+    what: "5-minute technical Viva.",
+    why: "Individual technical assessment.",
+    path: "",
+  },
+];
 
 export default function ProjectPhaseCards({
   projectId,
@@ -60,7 +73,7 @@ export default function ProjectPhaseCards({
 
   useEffect(() => {
     const fetchStatuses = async () => {
-      if (!user) return;
+      if (!user || !projectId) return;
       setLoading(true);
       try {
         const [e1, e2, e3] = await Promise.all([
@@ -70,11 +83,13 @@ export default function ProjectPhaseCards({
         ]);
 
         const p1Status = e1.data?.status || (phase1Data ? "IN_PROGRESS" : "NOT_STARTED");
-        const p2Status = (currentPhase === "PHASE_1" && e1.data?.status !== "COMPLETED") ? "LOCKED" : (e2.data?.status || (phase2Data ? "IN_PROGRESS" : "AVAILABLE"));
-        const p3Status = (currentPhase === "PHASE_1" || (currentPhase === "PHASE_2" && e2.data?.status !== "COMPLETED")) ? "LOCKED" : (e3.data?.status || (finalData ? "IN_PROGRESS" : "AVAILABLE"));
-        
-        // Interview is only available if all 3 phases are COMPLETED
-        const interviewStatus = (p1Status === "COMPLETED" && p2Status === "COMPLETED" && p3Status === "COMPLETED") ? "AVAILABLE" : "LOCKED";
+        const p2Status = currentPhase === "PHASE_1" && e1.data?.status !== "COMPLETED" ? "LOCKED" : e2.data?.status || (phase2Data ? "IN_PROGRESS" : "AVAILABLE");
+        const p3Status =
+          currentPhase === "PHASE_1" || (currentPhase === "PHASE_2" && e2.data?.status !== "COMPLETED")
+            ? "LOCKED"
+            : e3.data?.status || (finalData ? "IN_PROGRESS" : "AVAILABLE");
+
+        const interviewStatus = p1Status === "COMPLETED" && p2Status === "COMPLETED" && p3Status === "COMPLETED" ? "AVAILABLE" : "LOCKED";
 
         setPhaseStatuses({
           phase1: p1Status,
@@ -92,103 +107,72 @@ export default function ProjectPhaseCards({
     fetchStatuses();
   }, [currentPhase, finalData, phase1Data, phase2Data, projectId, isTestUser, user]);
 
-  const phases = [
-    {
-      id: "phase1",
-      title: "Phase 1: Project Concept",
-      description: "Define your project title, abstract, domain, and initial goals. This is your project's foundation.",
-      icon: <Rocket className="h-8 w-8" />,
-      status: phaseStatuses.phase1,
-      isLocked: false,
-      color: "border-blue-200 bg-blue-50/50",
-      path: "/student/submit/phase1",
-    },
-    {
-      id: "phase2",
-      title: "Phase 2: Mid-term Build",
-      description: "Submit your code repository, architecture diagrams, and progress milestones for evaluation.",
-      icon: <Terminal className="h-8 w-8" />,
-      status: phaseStatuses.phase2,
-      isLocked: phaseStatuses.phase2 === "LOCKED",
-      color: phaseStatuses.phase2 === "LOCKED" ? "border-gray-200 bg-gray-50/50" : "border-indigo-200 bg-indigo-50/50",
-      path: "/student/submit/phase2",
-    },
-    {
-      id: "final",
-      title: "Phase 3: Final Showcase",
-      description: "The grand finale. Submit your final report, demo video, and complete source code.",
-      icon: <Trophy className="h-8 w-8" />,
-      status: phaseStatuses.final,
-      isLocked: phaseStatuses.final === "LOCKED",
-      color: phaseStatuses.final === "LOCKED" ? "border-gray-200 bg-gray-50/50" : "border-amber-200 bg-amber-50/50",
-      path: "/student/submit/final",
-    },
-    {
-      id: "interview",
-      title: "AI Technical Interview",
-      description: "Final technical viva. Face the AI to validate your technical depth and original contributions.",
-      icon: <Mic className="h-8 w-8" />,
-      status: phaseStatuses.interview,
-      isLocked: phaseStatuses.interview === "LOCKED",
-      color: phaseStatuses.interview === "LOCKED" ? "border-gray-200 bg-gray-50/50" : "border-violet-200 bg-violet-50/50",
-      path: projectId ? `/student/interview/${projectId}` : "#",
-    },
-  ];
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[240px] rounded-3xl border border-dashed border-slate-200 bg-white/70">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex min-h-[180px] items-center justify-center rounded-xl border border-dashed border-border bg-muted/20">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {phases.map((phase) => {
-        const statusInfo = getStatusDisplay(phase.status);
-        const disabled = phase.isLocked || (phase.id !== 'interview' && !isLeader && phase.status === "NOT_STARTED");
-        
-        let label = phase.isLocked ? "Locked" : (isLeader ? "Start Submission" : "Leader-only");
+  const statuses: Record<string, string> = {
+    phase1: phaseStatuses.phase1,
+    phase2: phaseStatuses.phase2,
+    final: phaseStatuses.final,
+    interview: phaseStatuses.interview,
+  };
 
-        if (phase.id === 'interview') {
-          label = phase.isLocked ? "Complete All Three Phases" : "Start Interview";
-        } else {
-          if (phase.status === "COMPLETED") {
-            label = isLeader ? "View/Edit Submission" : "View Submission";
-          } else if (phase.status === "AWAITING_CLARIFICATION") {
-            label = isLeader ? "Provide Clarification" : "View Clarification";
-          }
-        }
+  const getStatusLabel = (s: string) => {
+    if (s === "COMPLETED") return "Completed";
+    if (s === "AWAITING_CLARIFICATION") return "Needs clarification";
+    if (s === "IN_PROGRESS") return "In review";
+    if (s === "AVAILABLE") return "Ready";
+    if (s === "LOCKED") return "Locked";
+    return "Not started";
+  };
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {phaseCopy.map((phase) => {
+        const status = statuses[phase.id] || "NOT_STARTED";
+        const isLocked = status === "LOCKED";
+        const disabled = isLocked || (phase.id !== "interview" && !isLeader && status === "NOT_STARTED");
+        const path = phase.id === "interview" ? (projectId ? `/student/interview/${projectId}` : "#") : phase.path;
+
+        let label = isLocked ? "Locked" : isLeader ? "Open" : "View";
+        if (phase.id === "interview") label = isLocked ? "Locked" : "Start Viva";
+        else if (status === "COMPLETED") label = isLeader ? "View / Edit" : "View";
+        else if (status === "AWAITING_CLARIFICATION") label = isLeader ? "Clarify" : "View";
 
         return (
-          <Card key={phase.id} className={`relative overflow-hidden border-2 transition-all hover:shadow-md ${phase.color} ${phase.isLocked ? "opacity-75 grayscale" : ""}`}>
-            {phase.isLocked && (
-              <div className="absolute top-4 right-4 text-muted-foreground">
-                <Lock className="h-5 w-5" />
-              </div>
-            )}
-            <CardHeader className="pb-4">
-              <div className={`p-3 rounded-xl bg-white w-fit shadow-sm border mb-4 ${phase.isLocked ? "text-gray-400" : "text-primary"}`}>
-                {phase.icon}
-              </div>
-              <CardTitle className="text-xl font-bold">{phase.title}</CardTitle>
-              <CardDescription className="text-sm leading-relaxed mt-2 h-12">{phase.description}</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-4 flex flex-col gap-6">
+          <Card key={phase.id} className={`flex flex-col border border-border bg-card ${isLocked ? "opacity-60" : ""}`}>
+            <div className="space-y-3 p-5">
               <div className="flex items-center justify-between">
-                <Badge className={`px-3 py-1 border ${statusInfo.color}`} variant="outline">
-                  {statusInfo.label}
-                </Badge>
-                {phase.status === "COMPLETED" && (
-                  <div className="flex items-center gap-1 text-xs text-green-600 font-medium">
-                    <CheckCircle2 className="h-3 w-3" />
-                    Verified
-                  </div>
-                )}
+                <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Step {phase.step}</span>
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${status === "COMPLETED" ? "bg-foreground" : status === "AVAILABLE" ? "bg-primary" : status === "LOCKED" ? "bg-border" : "bg-muted-foreground"}`}
+                  />
+                  {getStatusLabel(status)}
+                </span>
               </div>
-              <Button asChild disabled={disabled} className={`w-full py-6 text-base font-bold shadow-lg transition-transform active:scale-95 ${disabled ? "bg-gray-400" : ""}`}>
-                <Link href={disabled ? "#" : phase.path}>{label}</Link>
+              <h3 className="text-base font-semibold tracking-tight text-foreground">{phase.title}</h3>
+              <div className="space-y-1 text-xs leading-relaxed text-muted-foreground">
+                <p>
+                  <span className="font-medium text-foreground">What:</span> {phase.what}
+                </p>
+                <p>{phase.why}</p>
+              </div>
+            </div>
+            <CardContent className="mt-auto p-5 pt-0">
+              <Button
+                asChild={!disabled}
+                disabled={disabled}
+                size="sm"
+                variant={disabled ? "outline" : isLocked ? "outline" : "default"}
+                className={`h-8 w-full text-xs font-medium ${!disabled ? "bg-primary text-primary-foreground hover:bg-primary/90" : "border-border text-muted-foreground"}`}
+              >
+                {disabled ? <span>{label}</span> : <Link href={path}>{label}</Link>}
               </Button>
             </CardContent>
           </Card>

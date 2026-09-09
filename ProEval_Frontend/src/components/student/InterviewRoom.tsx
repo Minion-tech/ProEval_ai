@@ -77,7 +77,6 @@ export const InterviewRoom: React.FC<InterviewRoomProps> = ({ submissionId, onCo
   const simulateAiFeedback = async () => {
     try {
       setContextLoading(true);
-      // Call the webhook endpoint directly with mock data
       await apiClient.post("/integrations/elevenlabs/webhook", {
         call: {
           call_id: `test_${Math.random().toString(36).substring(7)}`,
@@ -111,26 +110,24 @@ export const InterviewRoom: React.FC<InterviewRoomProps> = ({ submissionId, onCo
 
   if (isMonitoringLoading || contextLoading) {
     return (
-      <div className="flex h-64 flex-col items-center justify-center space-y-4">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-muted-foreground">Setting up AI Interview Room...</p>
+      <div className="flex h-64 flex-col items-center justify-center gap-3">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">Setting up interview</p>
       </div>
     );
   }
 
   if (contextError) {
     return (
-      <Card className="border-destructive/50 bg-destructive/10">
-        <CardContent className="pt-6 space-y-4 text-center">
-          <div className="flex items-center justify-center space-x-2 text-destructive">
-            <AlertCircle className="h-5 w-5" />
-            <p className="font-semibold">{contextError}</p>
+      <Card className="border border-destructive/20 bg-destructive/10">
+        <CardContent className="space-y-4 p-6 text-center">
+          <div className="flex items-center justify-center gap-2 text-destructive">
+            <AlertCircle className="h-4 w-4" />
+            <p className="text-sm font-medium">{contextError}</p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Please ensure your backend server is running and reachable.
-          </p>
-          <Button onClick={fetchContext} variant="outline" size="sm">
-            Retry Connection
+          <p className="text-sm text-muted-foreground">Please ensure the server is reachable.</p>
+          <Button onClick={fetchContext} variant="outline" size="sm" className="h-8">
+            Retry
           </Button>
         </CardContent>
       </Card>
@@ -153,68 +150,62 @@ export const InterviewRoom: React.FC<InterviewRoomProps> = ({ submissionId, onCo
   return (
     <div className="space-y-6">
       {step === "setup" && (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <Card className="h-fit">
-            <CardHeader>
-              <CardTitle>AI Viva Preparation</CardTitle>
-              <CardDescription>We will use your camera to validate integrity and your microphone for the conversational AI.</CardDescription>
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card className="border border-border bg-card">
+            <CardHeader className="border-b border-border">
+              <CardTitle className="text-base font-semibold">Preparation</CardTitle>
+              <CardDescription className="text-xs leading-relaxed">Camera check and microphone for the Viva.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="relative aspect-video overflow-hidden rounded-lg bg-black">
-                <Webcam
-                  ref={webcamRef}
-                  audio={false}
-                  className="h-full w-full object-cover"
-                />
-                <div className="absolute bottom-4 left-4 flex space-x-2">
-                  <div className="flex items-center space-x-1 rounded-full bg-green-500/80 px-3 py-1 text-xs font-bold text-white">
-                    <Camera className="h-3 w-3" />
-                    <span>Camera Ready</span>
-                  </div>
-                  <div className="flex items-center space-x-1 rounded-full bg-green-500/80 px-3 py-1 text-xs font-bold text-white">
-                    <Mic className="h-3 w-3" />
-                    <span>Mic Ready</span>
-                  </div>
+            <CardContent className="space-y-5 p-6">
+              <div className="relative aspect-video overflow-hidden rounded-lg border border-border bg-muted">
+                <Webcam ref={webcamRef} audio={false} className="h-full w-full object-cover" />
+                <div className="absolute bottom-3 left-3 flex gap-2">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground">
+                    <Camera className="h-3 w-3" /> Camera
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground">
+                    <Mic className="h-3 w-3" /> Mic
+                  </span>
                 </div>
               </div>
 
-              <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
-                <ul className="list-inside list-disc space-y-1">
-                  <li>Ensure you are in a well-lit, quiet environment.</li>
-                  <li>Stay centered in the frame; we will track your focus.</li>
-                  <li>The AI will ask exactly 3 technical questions about your architecture and challenges.</li>
-                </ul>
-              </div>
+              <ul className="space-y-2 text-sm leading-relaxed text-muted-foreground">
+                <li className="flex gap-2.5">
+                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-foreground" />
+                  <span>Quiet, well-lit environment; stay centered in frame.</span>
+                </li>
+                <li className="flex gap-2.5">
+                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-foreground" />
+                  <span>Three technical questions on architecture and challenges.</span>
+                </li>
+              </ul>
 
-              <Button onClick={startInterview} className="w-full h-12 text-lg font-bold">
+              <Button onClick={startInterview} className="h-10 w-full bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
                 Start Interview
               </Button>
             </CardContent>
           </Card>
 
           {interviewContext && (
-            <Card className="border-indigo-100 bg-indigo-50/30">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-indigo-900">
-                  <MessageSquare className="h-5 w-5" />
-                  Your Personalized Viva Topics
-                </CardTitle>
-                <CardDescription>Our AI has reviewed your project and prepared these initial points of discussion.</CardDescription>
+            <Card className="border border-border bg-card">
+              <CardHeader className="border-b border-border">
+                <CardTitle className="text-base font-semibold">Viva topics</CardTitle>
+                <CardDescription className="text-xs">Tailored to your project and role.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
+              <CardContent className="space-y-4 p-6">
+                <ul className="space-y-3">
                   {interviewContext.initial_questions.map((q, i) => (
-                    <div key={i} className="flex items-start gap-3 rounded-lg border bg-white p-3 shadow-sm">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-600">
+                    <li key={i} className="flex gap-3 rounded-lg border border-border bg-muted/20 px-3 py-3 text-sm leading-relaxed text-foreground">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border bg-background text-xs font-medium">
                         {i + 1}
                       </span>
-                      <p className="text-sm text-slate-700">{q}</p>
-                    </div>
+                      <span>{q}</span>
+                    </li>
                   ))}
-                </div>
-                <div className="rounded-lg border border-indigo-200 bg-white p-4">
-                  <p className="text-xs font-bold uppercase tracking-wider text-indigo-600">Interviewer Agent</p>
-                  <p className="mt-1 text-sm font-medium">{interviewContext.agent_name}</p>
+                </ul>
+                <div className="rounded-lg border border-border bg-muted/20 px-3 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Interviewer</p>
+                  <p className="mt-1 text-sm font-medium text-foreground">{interviewContext.agent_name}</p>
                 </div>
               </CardContent>
             </Card>
@@ -225,46 +216,45 @@ export const InterviewRoom: React.FC<InterviewRoomProps> = ({ submissionId, onCo
       {step === "interview" && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-4">
-            <Card className="bg-neutral-900 text-white border-none shadow-2xl overflow-hidden">
-              <CardHeader className="border-b border-white/10 bg-neutral-800">
+            <Card className="bg-card text-foreground border-none shadow-sm overflow-hidden">
+              <CardHeader className="border-b border-border bg-card">
                 <CardTitle className="flex items-center justify-between">
                    <span className="flex items-center gap-2">
-                     <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                     AI Technical Interviewer
-                   </span>
-                   <span className="text-[10px] font-mono text-white/50 uppercase tracking-widest">Live Session</span>
-                </CardTitle>
+                      <div className="h-2 w-2 rounded-full bg-destructive animate-pulse" />
+                      AI Technical Interviewer
+                    </span>
+                    <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Live Session</span>
+                 </CardTitle>
               </CardHeader>
-              <CardContent className="h-[500px] flex items-center justify-center bg-black p-0 relative">
-                {/* Visual Radar Decoration */}
+              <CardContent className="h-[500px] flex items-center justify-center relative">
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
-                   <div className="h-64 w-64 rounded-full border border-indigo-500/30 animate-[ping_3s_linear_infinite]" />
-                   <div className="absolute h-48 w-48 rounded-full border border-indigo-500/50 animate-[ping_2s_linear_infinite]" />
+                   <div className="h-64 w-64 rounded-full border border-primary/30 animate-[ping_3s_linear_infinite]" />
+                   <div className="absolute h-48 w-48 rounded-full border border-primary/50 animate-[ping_2s_linear_infinite]" />
                 </div>
                 
                 <div className="z-10 w-full h-full flex items-center justify-center p-4">
-                     <ElevenLabsOrb 
-                       agentId={process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID || "agent_0001ktxk2n0wfjq8bannqea0xjtw"}
-                       submissionId={submissionId}
-                       userName={interviewContext?.student_name}
-                       userRole={interviewContext?.student_role}
-                       systemPrompt={interviewContext?.system_prompt}
-                       projectSummary={interviewContext?.project_summary}
-                       initialQuestions={interviewContext?.initial_questions}
-                       shouldEnd={isSubmitting}
-                     />
-                </div>
+                      <ElevenLabsOrb 
+                        agentId={process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID || "agent_0001ktxk2n0wfjq8bannqea0xjtw"}
+                        submissionId={submissionId}
+                        userName={interviewContext?.student_name}
+                        userRole={interviewContext?.student_role}
+                        systemPrompt={interviewContext?.system_prompt}
+                        projectSummary={interviewContext?.project_summary}
+                        initialQuestions={interviewContext?.initial_questions}
+                        shouldEnd={isSubmitting}
+                      />
+                 </div>
               </CardContent>
             </Card>
             <Button 
               size="lg"
               onClick={finishInterview} 
-              className="w-full bg-white text-black hover:bg-neutral-200 font-bold h-14"
+              className="w-full bg-primary hover:opacity-90 text-foreground font-bold h-14"
             >
                Submit Viva & Finalize
             </Button>
             <p className="text-center text-xs text-muted-foreground italic">
-              * Clicking submit will end the AI session and prepare your technical feedback report.
+               * Clicking submit will end the AI session and prepare your technical feedback report.
             </p>
           </div>
 
@@ -274,34 +264,34 @@ export const InterviewRoom: React.FC<InterviewRoomProps> = ({ submissionId, onCo
                  <CardTitle className="text-sm">Monitoring System</CardTitle>
                </CardHeader>
                <CardContent className="space-y-4">
-                 <div className="relative aspect-video overflow-hidden rounded-lg bg-black">
-                    <Webcam
-                      ref={webcamRef}
-                      audio={false}
-                      className="h-full w-full object-cover opacity-50"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                       <div className="text-[10px] font-mono text-green-500">
-                          {telemetry.lookAwayCount > 10 ? (
-                            <span className="text-yellow-500">WARNING: LOOKING AWAY</span>
-                          ) : (
-                            <span>INTEGRITY: SECURE</span>
-                          )}
-                       </div>
+                  <div className="relative aspect-video overflow-hidden rounded-lg bg-muted">
+                     <Webcam
+                       ref={webcamRef}
+                       audio={false}
+                       className="h-full w-full object-cover opacity-50"
+                     />
+                     <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-[10px] font-mono text-emerald-500">
+                           {telemetry.lookAwayCount > 10 ? (
+                             <span className="text-amber-500">WARNING: LOOKING AWAY</span>
+                           ) : (
+                             <span>INTEGRITY: SECURE</span>
+                           )}
+                        </div>
+                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs">
+                       <span className="text-muted-foreground">Focus Score</span>
+                       <span className="font-bold">{(100 - (telemetry.lookAwayCount / (telemetry.totalChecks || 1)) * 100).toFixed(0)}%</span>
                     </div>
-                 </div>
-                 <div className="space-y-2">
-                   <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Focus Score</span>
-                      <span className="font-bold">{(100 - (telemetry.lookAwayCount / (telemetry.totalChecks || 1)) * 100).toFixed(0)}%</span>
-                   </div>
-                   <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
-                      <div 
-                        className="h-full bg-primary transition-all duration-500" 
-                        style={{ width: `${100 - (telemetry.lookAwayCount / (telemetry.totalChecks || 1)) * 100}%` }}
-                      />
-                   </div>
-                 </div>
+                    <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                       <div 
+                         className="h-full bg-primary transition-all duration-500" 
+                         style={{ width: `${100 - (telemetry.lookAwayCount / (telemetry.totalChecks || 1)) * 100}%` }}
+                       />
+                    </div>
+                  </div>
                </CardContent>
             </Card>
           </div>
@@ -309,49 +299,31 @@ export const InterviewRoom: React.FC<InterviewRoomProps> = ({ submissionId, onCo
       )}
 
       {step === "result" && (
-        <Card className="border-green-200 bg-green-50 dark:bg-green-900/20 shadow-lg py-8">
-          <CardContent className="text-center space-y-8">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-100 dark:bg-green-800 shadow-inner">
-              <CheckCircle2 className="h-12 w-12 text-green-600 dark:text-green-400" />
+        <Card className="border border-border bg-card py-8">
+          <CardContent className="space-y-6 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-border bg-muted/30">
+              <CheckCircle2 className="h-7 w-7 text-foreground" />
             </div>
-            <div className="space-y-3">
-              <CardTitle className="text-3xl font-extrabold text-green-900 dark:text-green-300">Viva Successfully Submitted!</CardTitle>
-              <CardDescription className="text-lg text-green-700/80 dark:text-green-400/80 max-w-lg mx-auto">
-                Excellent work! Your AI Technical Viva is complete. Our agents are now processing the transcript and telemetry to generate your detailed feedback.
-              </CardDescription>
+            <div className="space-y-2">
+              <h3 className="text-xl font-semibold tracking-tight text-foreground">Viva submitted</h3>
+              <p className="mx-auto max-w-lg text-sm leading-relaxed text-muted-foreground">Your session is complete. Feedback will be generated shortly.</p>
             </div>
-            
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-              <Button 
-                onClick={() => window.location.href = "/student/feedback"} 
-                size="lg"
-                className="bg-indigo-600 hover:bg-indigo-700 font-bold px-8 h-14"
-              >
-                 View Detailed AI Feedback
+
+            <div className="flex flex-col items-center justify-center gap-3 pt-2 sm:flex-row">
+              <Button onClick={() => (window.location.href = "/student/feedback")} className="h-9 bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
+                View Feedback
               </Button>
               {isStoredTestUser() && (
-                <Button 
-                  onClick={simulateAiFeedback} 
-                  variant="secondary"
-                  size="lg"
-                  className="bg-purple-600 hover:bg-purple-700 text-white font-bold h-14 px-8"
-                >
-                   🚀 Simulate AI Feedback (Dev Mode)
+                <Button onClick={simulateAiFeedback} variant="outline" size="sm" className="h-9">
+                  Simulate Feedback (Dev)
                 </Button>
               )}
-              <Button 
-                onClick={() => window.location.href = "/student/dashboard"} 
-                variant="outline"
-                size="lg"
-                className="border-green-200 bg-white text-green-700 hover:bg-green-50 font-bold h-14"
-              >
-                 Back to Dashboard
+              <Button onClick={() => (window.location.href = "/student/dashboard")} variant="outline" size="sm" className="h-9">
+                Dashboard
               </Button>
             </div>
-            
-            <p className="text-xs text-green-600/60 font-medium">
-              Note: It may take up to 30 seconds for the transcript and summary to appear on the feedback page.
-            </p>
+
+            <p className="text-xs text-muted-foreground">Transcript appears on the feedback page within ~30 seconds.</p>
           </CardContent>
         </Card>
       )}
