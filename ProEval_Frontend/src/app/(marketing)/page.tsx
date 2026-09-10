@@ -9,9 +9,10 @@ import { HowItWorks } from "./components/how-it-works"
 import { CTA } from "./components/cta"
 
 // Reuses existing editorial sections — preserves content, Spotlight, and links.
+// Page canvas uses theme-aware neutral — light #f7f7f5 / dark #0d0d0d via --background token.
 export default function MarketingPage() {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col bg-background">
       <Hero />
       <ProductPreview />
       <WhatIsProEval />

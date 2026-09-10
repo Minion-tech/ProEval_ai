@@ -2,28 +2,28 @@ export function WhatIsProEval() {
   const workflow = [
     {
       number: "01",
-      title: "Team setup",
+      title: "Build your team",
       description: "Create your project team and establish roles.",
     },
     {
       number: "02",
-      title: "Proposal",
-      description: "Submit your idea with goals, scope, and direction.",
+      title: "Define the project",
+      description: "Submit your idea, goals, scope, and direction.",
     },
     {
       number: "03",
-      title: "Architecture",
+      title: "Design the solution",
       description: "Turn your proposal into a clear technical plan.",
     },
     {
       number: "04",
-      title: "Final evaluation",
-      description: "Present the completed project for structured review.",
+      title: "Present your work",
+      description: "Submit the completed project for structured review.",
     },
     {
       number: "05",
-      title: "AI technical viva",
-      description: "Demonstrate your technical understanding through viva.",
+      title: "Defend your project",
+      description: "Demonstrate your technical understanding through an AI-powered viva.",
     },
   ]
 
@@ -52,7 +52,7 @@ export function WhatIsProEval() {
     <section
       id="what-is"
       aria-labelledby="what-is-heading"
-      className="relative overflow-hidden border-t border-border bg-muted/30 px-4 py-20 sm:px-6 sm:py-24 lg:px-8 lg:py-32"
+      className="relative overflow-hidden border-t border-border bg-background px-4 py-20 sm:px-6 sm:py-24 lg:px-8 lg:py-32"
     >
       {/* Subtle background detail */}
       <div
@@ -64,24 +64,9 @@ export function WhatIsProEval() {
         {/* Section header */}
         <div className="grid gap-10 lg:grid-cols-[0.8fr_1.4fr] lg:items-end">
           <div>
-            <div className="flex items-center gap-3">
-              <span
-                className="text-xs font-semibold uppercase tracking-[0.2em] text-primary"
-                aria-hidden="true"
-              >
-                01
-              </span>
-
-              <span className="h-px w-10 bg-border" aria-hidden="true" />
-
-              <span className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                The platform
-              </span>
-            </div>
-
             <h2
               id="what-is-heading"
-              className="mt-5 max-w-xl text-4xl font-bold leading-[0.94] tracking-[-0.04em] text-foreground sm:text-5xl lg:text-6xl"
+              className="max-w-xl text-4xl font-bold leading-[0.94] tracking-[-0.04em] text-foreground sm:text-5xl lg:text-6xl"
             >
               What is{" "}
               <span className="text-primary">ProEval?</span>
@@ -102,33 +87,33 @@ export function WhatIsProEval() {
           </div>
         </div>
 
-        {/* Workflow */}
+        {/* Workflow — refined narrative & interaction */}
         <div className="mt-16 sm:mt-20">
-          <div className="mb-5 flex items-end justify-between gap-6">
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                One connected workflow
+                ONE CONNECTED WORKFLOW
               </p>
 
-              <p className="mt-2 text-sm text-muted-foreground">
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                 Every phase has a purpose, submission, and evaluation.
               </p>
             </div>
 
             <span
-              className="hidden text-xs font-medium text-muted-foreground sm:block"
+              className="shrink-0 text-xs font-medium tracking-widest text-muted-foreground/60"
               aria-hidden="true"
             >
               01 — 05
             </span>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-border bg-card">
+          <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
             <div className="grid divide-y divide-border lg:grid-cols-5 lg:divide-x lg:divide-y-0">
               {workflow.map((item, index) => (
                 <div
                   key={item.number}
-                  className="group relative px-5 py-6 transition-colors duration-200 hover:bg-muted/40 sm:px-6 sm:py-7"
+                  className="group relative flex flex-col px-5 py-6 transition-all duration-250 ease-out hover:bg-muted/40 sm:px-6 sm:py-7 motion-reduce:transition-none"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <span className="text-xs font-semibold tracking-[0.15em] text-primary">
@@ -137,7 +122,7 @@ export function WhatIsProEval() {
 
                     {index < workflow.length - 1 && (
                       <span
-                        className="hidden text-muted-foreground/40 lg:block"
+                        className="hidden translate-x-0 text-muted-foreground/40 transition-all duration-250 ease-out group-hover:translate-x-0.5 group-hover:text-primary/60 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0 lg:block"
                         aria-hidden="true"
                       >
                         →
@@ -145,7 +130,7 @@ export function WhatIsProEval() {
                     )}
                   </div>
 
-                  <h3 className="mt-10 text-base font-semibold tracking-[-0.01em] text-foreground">
+                  <h3 className="mt-10 text-base font-semibold tracking-[-0.01em] text-foreground transition-colors duration-200 group-hover:text-foreground motion-reduce:transition-none">
                     {item.title}
                   </h3>
 
@@ -154,7 +139,7 @@ export function WhatIsProEval() {
                   </p>
 
                   <div
-                    className="mt-6 h-px w-8 bg-border transition-all duration-200 group-hover:w-14 group-hover:bg-primary"
+                    className="mt-6 h-px w-8 bg-border transition-all duration-250 ease-out group-hover:w-12 group-hover:bg-primary motion-reduce:transition-none"
                     aria-hidden="true"
                   />
                 </div>
@@ -202,7 +187,7 @@ export function WhatIsProEval() {
           </div>
         </div>
 
-        {/* Bottom principle strip */}
+        {/* Bottom principle strip — white surface on neutral canvas */}
         <div className="mt-8 flex flex-col gap-4 rounded-xl border border-border bg-card px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <p className="text-sm font-medium text-foreground">
             Structured. Evaluated. Improved.

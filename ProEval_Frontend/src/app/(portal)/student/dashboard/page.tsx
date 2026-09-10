@@ -132,9 +132,6 @@ export default function StudentDashboardPage() {
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="space-y-2.5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              Dashboard
-            </p>
             <h1 className="text-[28px] font-bold tracking-tight text-foreground md:text-[32px]">
               {isTestUser ? "Testing Workspace" : "Project Home"}
             </h1>
@@ -188,9 +185,6 @@ export default function StudentDashboardPage() {
           <div className="px-6 py-7 md:px-8 md:py-8">
             <div className="space-y-6">
               <div className="space-y-2.5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                  Next step
-                </p>
                 <h2 className="text-[22px] font-bold tracking-tight text-foreground md:text-[26px]">
                   {humanPhase}
                 </h2>
@@ -255,9 +249,6 @@ export default function StudentDashboardPage() {
           projectData?.latest_evaluation_status === "AWAITING_CLARIFICATION" && (
             <div className="flex flex-col gap-4 rounded-[14px] border border-amber-200 bg-amber-50/50 px-6 py-5 md:flex-row md:items-center md:justify-between dark:border-amber-900/30 dark:bg-amber-950/20">
               <div className="space-y-1">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-amber-700 dark:text-amber-400">
-                  Attention required
-                </p>
                 <h3 className="text-[15px] font-semibold tracking-tight text-foreground">Clarification questions waiting</h3>
                 <p className="max-w-xl text-[13px] leading-relaxed text-muted-foreground">
                   The reviewer needs three short answers to clarify scope before finalizing Phase 1.

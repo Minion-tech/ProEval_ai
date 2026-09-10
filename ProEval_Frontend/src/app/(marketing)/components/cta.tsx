@@ -4,12 +4,12 @@ import { IconArrowRight } from "@tabler/icons-react"
 
 export function CTA() {
   return (
-    <section className="px-6 py-24">
+    <section className="border-t border-border bg-background px-6 py-24">
       <div className="mx-auto max-w-4xl">
         <div className="border-t border-border pt-24 text-center">
-          <h2 className="mb-6 text-4xl font-bold tracking-tight md:text-5xl">Ready to start?</h2>
+          <h2 className="mb-6 text-4xl font-bold tracking-tight md:text-5xl">Your project deserves more than a submission.</h2>
           <p className="mx-auto mb-12 max-w-xl text-lg leading-relaxed text-muted-foreground">
-            Begin your project evaluation journey with a clearer path from team setup to final assessment.
+            Build it. Evaluate it. Improve it. Defend it. Turn your project into proof with ProEval.
           </p>
           <Button size="lg" asChild>
             <Link href="/register">
