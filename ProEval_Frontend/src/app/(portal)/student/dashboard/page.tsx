@@ -175,6 +175,7 @@ export default function StudentDashboardPage() {
           isLeader={isLeader}
           latestStatus={projectData?.latest_evaluation_status ?? undefined}
           hasTeam={!!activeProject}
+          projectId={activeProject?.id}
         />
 
         {/* Primary Next Step */}

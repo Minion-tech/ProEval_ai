@@ -3,7 +3,7 @@
 import { useConversation } from "@elevenlabs/react";
 import { useCallback, useState, useEffect, memo } from "react";
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, PhoneOff, PhoneCall, Loader2 } from "lucide-react";
+import { Mic, PhoneOff, PhoneCall, Loader2 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 
 interface ElevenLabsOrbProps {
@@ -119,38 +119,59 @@ export const ElevenLabsOrb = memo(({
     }
   }, [status, isCalling]);
 
+  const isConnected = status === "connected";
+  const isIdle = !isConnected && !isConnecting;
+
   return (
-    <div className="flex flex-col items-center justify-center space-y-12">
+    <div className="flex flex-col items-center gap-10">
+      {/* Orb Visual */}
       <div className="relative flex items-center justify-center">
+        {/* Outer glow */}
         <div 
-          className={`absolute h-64 w-64 rounded-full bg-primary/20 blur-3xl transition-all duration-1000 ${
-            status === "connected" ? "opacity-100 scale-105" : "opacity-0 scale-50"
+          className={`absolute h-72 w-72 rounded-full transition-all duration-1000 ${
+            isConnected 
+              ? "bg-primary/15 blur-3xl opacity-100 scale-100" 
+              : "bg-primary/10 blur-3xl opacity-0 scale-75"
           }`} 
         />
-        
+
+        {/* Speaking rings */}
         {isSpeaking && (
-          <div className="absolute h-48 w-48 rounded-full border-2 border-primary/30 animate-ping" />
+          <>
+            <div className="absolute h-52 w-52 rounded-full border border-primary/20 animate-[ping_2.5s_ease-in-out_infinite]" />
+            <div className="absolute h-40 w-40 rounded-full border border-primary/15 animate-[ping_2s_ease-in-out_infinite_0.5s]" />
+          </>
         )}
 
+        {/* Main orb */}
         <div 
-          className={`relative z-20 flex h-40 w-48 items-center justify-center rounded-full border-2 border-border/50 shadow-sm transition-all duration-500 bg-background overflow-hidden ${
-            status === "connected" 
-              ? "border-primary/50 shadow-sm" 
-              : "border-border/50 shadow-none"
+          className={`relative z-10 flex h-36 w-36 items-center justify-center rounded-full border-2 transition-all duration-500 ${
+            isConnected 
+              ? "border-primary/40 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent shadow-[0_0_40px_-8px] shadow-primary/20" 
+              : isConnecting
+              ? "border-border/60 bg-muted/30"
+              : "border-border/40 bg-muted/20"
           }`}
         >
-          <div className="flex items-end justify-center space-x-1 h-12">
+          {/* Audio visualizer bars */}
+          <div className="flex items-end justify-center gap-[3px] h-10">
             {[1, 2, 3, 4, 5].map((i) => (
               <div 
                 key={i}
-                className={`w-1.5 bg-primary rounded-full transition-all duration-150 ${
-                  isSpeaking 
-                    ? "animate-pulse" 
-                    : "h-2 opacity-30"
+                className={`w-[3px] rounded-full transition-all duration-150 ${
+                  isConnected && isSpeaking
+                    ? "bg-primary"
+                    : isConnected
+                    ? "bg-primary/40"
+                    : "bg-muted-foreground/20"
                 }`}
                 style={{ 
-                  height: isSpeaking ? `${Math.random() * 40 + 10}px` : "8px",
-                  animationDelay: `${i * 0.1}s`
+                  height: isConnected && isSpeaking 
+                    ? `${Math.random() * 32 + 8}px` 
+                    : isConnected 
+                    ? "6px" 
+                    : "4px",
+                  animationDelay: `${i * 0.08}s`
                 }}
               />
             ))}
@@ -158,31 +179,65 @@ export const ElevenLabsOrb = memo(({
         </div>
       </div>
 
-      <div className="z-30 flex flex-col items-center space-y-4">
-        <Button
-          size="lg"
-          onClick={toggleCall}
-          disabled={status === "connecting" || isConnecting}
-          className={`h-16 w-16 rounded-full transition-all duration-300 shadow-sm ${
-            status === "connected"
-              ? "bg-destructive hover:opacity-90"
-              : "bg-primary hover:opacity-90"
-          }`}
-        >
-          {status === "connecting" || isConnecting ? (
-            <Loader2 className="h-8 w-8 animate-spin" />
-          ) : status === "connected" ? (
-            <PhoneOff className="h-8 w-8" />
+      {/* Status + Call Button */}
+      <div className="flex flex-col items-center gap-5">
+        {/* Status text */}
+        <div className="text-center">
+          {isConnected ? (
+            <p className="text-sm font-medium text-primary animate-pulse">
+              Interview in progress
+            </p>
+          ) : isConnecting ? (
+            <p className="text-sm font-medium text-muted-foreground">
+              Connecting to AI interviewer...
+            </p>
           ) : (
-            <PhoneCall className="h-8 w-8" />
+            <p className="text-sm font-medium text-muted-foreground">
+              Press to begin your viva
+            </p>
           )}
-        </Button>
-        
-        <p className={`text-sm font-medium tracking-wide transition-colors duration-300 ${
-          status === "connected" ? "text-primary animate-pulse" : "text-muted-foreground"
-        }`}>
-          {status === "connected" ? "Interviewing Live..." : "Click to Start Viva"}
-        </p>
+          {isConnected && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Speak clearly — the AI interviewer is listening
+            </p>
+          )}
+        </div>
+
+        {/* Call button */}
+        <div className="relative">
+          {/* Button glow */}
+          {isConnected && (
+            <div className="absolute inset-0 -m-1 rounded-full bg-destructive/20 blur-md animate-pulse" />
+          )}
+          <Button
+            size="lg"
+            onClick={toggleCall}
+            disabled={status === "connecting" || isConnecting}
+            className={`relative z-10 h-14 w-14 rounded-full transition-all duration-300 shadow-lg ${
+              isConnected
+                ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-destructive/20"
+                : isConnecting
+                ? "bg-muted text-muted-foreground"
+                : "bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/20"
+            }`}
+          >
+            {status === "connecting" || isConnecting ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : isConnected ? (
+              <PhoneOff className="h-5 w-5" />
+            ) : (
+              <PhoneCall className="h-5 w-5" />
+            )}
+          </Button>
+        </div>
+
+        {/* Mic indicator */}
+        {isConnected && (
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-muted/50 px-3 py-1.5">
+            <Mic className="h-3 w-3 text-muted-foreground" />
+            <span className="text-[11px] font-medium text-muted-foreground">Mic active</span>
+          </div>
+        )}
       </div>
     </div>
   );
