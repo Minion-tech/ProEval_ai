@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { AnimatedButton } from "@/components/ui/animated-button"
 import { Spotlight } from "@/components/ui/spotlight-new"
 import { IconArrowRight } from "@tabler/icons-react"
 
@@ -7,93 +8,110 @@ export function Hero() {
   return (
     <section
       aria-labelledby="hero-heading"
-      className="relative isolate overflow-hidden bg-black"
+      className="relative isolate overflow-hidden bg-background"
     >
-      {/* Spotlight — subtle premium background, never covers content */}
+      {/* Subtle spotlight */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
+        className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-60 dark:opacity-40"
       >
         <Spotlight
-          gradientFirst="radial-gradient(68.54% 68.72% at 55.02% 31.46%, hsla(210, 100%, 85%, .06) 0, hsla(210, 100%, 55%, .015) 50%, hsla(210, 100%, 45%, 0) 80%)"
-          gradientSecond="radial-gradient(50% 50% at 50% 50%, hsla(210, 100%, 85%, .04) 0, hsla(210, 100%, 55%, .015) 80%, transparent 100%)"
-          gradientThird="radial-gradient(50% 50% at 50% 50%, hsla(210, 100%, 85%, .025) 0, hsla(210, 100%, 45%, .012) 80%, transparent 100%)"
+          gradientFirst="radial-gradient(68.54% 68.72% at 55.02% 31.46%, hsla(30, 8%, 88%, 0.55) 0, hsla(30, 6%, 92%, 0.18) 50%, transparent 80%)"
+          gradientSecond="radial-gradient(50% 50% at 50% 50%, hsla(30, 8%, 90%, 0.35) 0, hsla(30, 6%, 93%, 0.12) 80%, transparent 100%)"
+          gradientThird="radial-gradient(50% 50% at 50% 50%, hsla(30, 8%, 92%, 0.20) 0, hsla(30, 6%, 94%, 0.08) 80%, transparent 100%)"
           translateY={-360}
           width={520}
           height={1280}
           smallWidth={220}
-          duration={8}
+          duration={10}
           xOffset={80}
         />
       </div>
 
-      {/* Readability overlay — ensures text contrast vs spotlight */}
+      {/* Gentle vignette */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-b from-black/10 via-black/0 to-black/35"
+        className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-b from-transparent via-transparent to-background/60"
       />
 
-      {/* Content — aligned to Navbar max-w-7xl + px system */}
-      <div className="relative z-10 mx-auto flex min-h-[560px] w-full max-w-7xl items-center px-4 py-16 sm:min-h-[600px] sm:px-6 sm:py-20 md:min-h-[640px] md:py-24 lg:min-h-[700px] lg:py-28">
-        <div className="w-full max-w-3xl lg:max-w-[46rem]">
-          {/* Eyebrow */}
-          <div className="mb-6 sm:mb-7">
-            <span className="inline-flex items-center rounded-full border border-white/[0.08] bg-white/[0.035] px-3.5 py-1.5 text-[11px] font-medium uppercase tracking-[0.18em] text-white/60 backdrop-blur-sm sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.2em]">
-              Academic Evaluation Platform
-            </span>
-          </div>
+      {/* Hero content */}
+      <div className="relative z-10 mx-auto flex min-h-[560px] w-full max-w-7xl items-center justify-center px-4 py-20 text-center sm:min-h-[600px] sm:px-6 sm:py-24 md:min-h-[640px] md:py-28 lg:min-h-[700px] lg:px-8 lg:py-32">
+        <div className="flex w-full max-w-4xl flex-col items-center">
+          {/* Main headline */}
 
-          {/* Headline — primary hierarchy */}
           <h1
             id="hero-heading"
-            className="max-w-[14ch] text-balance text-[2.625rem] font-bold leading-[0.9] tracking-[-0.04em] text-white sm:text-6xl md:text-7xl lg:text-[5.25rem] xl:text-[5.75rem]"
+            className="max-w-[13ch] text-balance text-[3.25rem] font-bold leading-[0.9] tracking-[-0.05em] text-foreground sm:text-6xl md:text-7xl lg:text-[5.5rem] xl:text-[6.25rem]"
           >
-            Build.
+            Turn your
             <br />
-            Submit.
+            project into
             <br />
-            <span className="font-bold text-white/50">Improve.</span>
+            <span className="font-bold text-foreground/40">
+              proof.
+            </span>
           </h1>
 
-          {/* Supporting description — scannable, no unsupported claims */}
-          <p className="mt-6 max-w-[42ch] text-pretty text-[15px] leading-7 text-white/60 sm:mt-7 sm:max-w-xl sm:text-[17px] md:text-lg md:leading-8 lg:max-w-2xl lg:text-[19px]">
-            A structured project evaluation platform designed to help students
-            build better projects, submit with confidence, and improve through
-            meaningful feedback.
+          {/* Supporting description */}
+          <p className="mt-7 max-w-[48ch] text-pretty text-[15px] leading-7 text-muted-foreground sm:mt-8 sm:text-[17px] md:text-lg md:leading-8 lg:text-[19px]">
+            Build, submit, evaluate, and improve your academic project with
+            structured feedback and AI-powered guidance—so you are ready to
+            present and defend your work with confidence.
           </p>
 
-          {/* CTAs — primary dominates, secondary visible, both accessible */}
-          <div className="mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:items-center">
-            <Button
-              size="lg"
-              className="h-11 w-full justify-center bg-white px-6 text-[14px] font-semibold text-black hover:bg-white/90 focus-visible:ring-white/30 sm:h-12 sm:w-auto sm:text-[15px]"
+          {/* CTA buttons */}
+          <div className="mt-9 flex w-full flex-col items-center justify-center gap-3 sm:mt-10 sm:w-auto sm:flex-row">
+
+            {/* Primary CTA */}
+            <AnimatedButton
+              className="h-11 w-full justify-center rounded-lg px-7 text-[14px] font-semibold shadow-sm sm:h-12 sm:w-auto sm:text-[15px]"
               asChild
             >
-              <Link href="/register" aria-label="Get started — create your ProEval account">
+              <Link
+                href="/register"
+                aria-label="Get started — create your ProEval account"
+              >
                 Get Started
-                <IconArrowRight aria-hidden="true" className="h-4 w-4 shrink-0" />
+                <IconArrowRight
+                  aria-hidden="true"
+                  className="h-4 w-4 shrink-0"
+                />
               </Link>
-            </Button>
+            </AnimatedButton>
 
+            {/* Secondary CTA */}
             <Button
               variant="outline"
               size="lg"
-              className="h-11 w-full justify-center border-white/10 bg-white/[0.04] px-6 text-[14px] font-semibold text-white backdrop-blur-sm hover:bg-white/10 hover:text-white focus-visible:border-white/20 focus-visible:ring-white/20 sm:h-12 sm:w-auto sm:text-[15px]"
+              className="h-11 w-full justify-center rounded-lg border border-border bg-card px-7 text-[14px] font-semibold text-foreground shadow-sm transition-colors duration-200 hover:bg-muted hover:text-foreground focus-visible:ring-ring/10 sm:h-12 sm:w-auto sm:text-[15px]"
               asChild
             >
-              <Link href="/student/dashboard" aria-label="View demo — open student dashboard">
+              <Link
+                href="/student/dashboard"
+                aria-label="View demo — open student dashboard"
+              >
                 View Demo
               </Link>
             </Button>
           </div>
 
-          {/* Micro detail — optional, subtle */}
-          <div className="mt-8 flex items-center gap-3 sm:mt-10">
-            <span aria-hidden="true" className="h-px w-7 bg-white/10 sm:w-8" />
-            <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-white/30 sm:text-xs sm:tracking-[0.18em]">
-              Structured · Evaluated · Improved
+          {/* Product positioning */}
+          <div className="mt-9 flex items-center justify-center gap-3 sm:mt-10">
+            <span
+              aria-hidden="true"
+              className="h-px w-7 bg-border sm:w-8"
+            />
+
+            <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground/60 sm:text-xs sm:tracking-[0.18em]">
+              Build · Evaluate · Improve · Defend
             </span>
+
+            <span
+              aria-hidden="true"
+              className="h-px w-7 bg-border sm:w-8"
+            />
           </div>
+
         </div>
       </div>
     </section>

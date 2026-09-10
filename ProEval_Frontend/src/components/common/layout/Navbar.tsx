@@ -7,10 +7,10 @@ import { Menu, X, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 const navItems = [
-  { title: "Product", href: "/" },
+  { title: "Home", href: "/" },
+  { title: "About", href: "/#what-is" },
   { title: "Features", href: "/#features" },
   { title: "How It Works", href: "/#how-it-works" },
-  { title: "About", href: "/#what-is" },
 ]
 
 export default function Navbar() {
@@ -58,7 +58,7 @@ export default function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-sm supports-[backdrop-filter]:bg-background/80">
       <div className="mx-auto flex h-[64px] w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 md:h-[68px]">
         {/* Brand — typography only */}
         <Link
@@ -102,7 +102,7 @@ export default function Navbar() {
         </nav>
 
         {/* Desktop Actions */}
-        <div className="hidden shrink-0 items-center gap-5 md:flex lg:gap-7">
+        <div className="hidden shrink-0 items-center gap-3 md:flex lg:gap-5">
           <Link
             href="/login"
             className="inline-flex h-8 items-center text-[14px] font-medium tracking-[-0.01em] text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
@@ -125,28 +125,30 @@ export default function Navbar() {
           </Button>
         </div>
 
-        {/* Mobile Menu Button */}
-        <button
-          type="button"
-          aria-label={mobileOpen ? "Close menu" : "Open menu"}
-          aria-expanded={mobileOpen}
-          aria-controls="mobile-nav"
-          onClick={() => setMobileOpen((v) => !v)}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-md text-foreground transition-colors duration-200 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background md:hidden"
-        >
-          {mobileOpen ? (
-            <X className="h-5 w-5" aria-hidden="true" />
-          ) : (
-            <Menu className="h-5 w-5" aria-hidden="true" />
-          )}
-        </button>
+        {/* Mobile Actions */}
+        <div className="flex items-center gap-2 md:hidden">
+          <button
+            type="button"
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-nav"
+            onClick={() => setMobileOpen((v) => !v)}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-md text-foreground transition-colors duration-200 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            {mobileOpen ? (
+              <X className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <Menu className="h-5 w-5" aria-hidden="true" />
+            )}
+          </button>
+        </div>
       </div>
 
-      {/* Mobile Panel */}
+      {/* Mobile Panel — card surface over background */}
       {mobileOpen && (
         <div
           id="mobile-nav"
-          className="absolute inset-x-0 top-[64px] z-50 max-h-[calc(100dvh-64px)] overflow-y-auto border-t border-border bg-background md:hidden md:top-[68px] md:max-h-[calc(100dvh-68px)]"
+          className="absolute inset-x-0 top-[64px] z-50 max-h-[calc(100dvh-64px)] overflow-y-auto border-t border-border bg-card md:hidden md:top-[68px] md:max-h-[calc(100dvh-68px)]"
           role="dialog"
           aria-modal="true"
           aria-label="Mobile navigation"

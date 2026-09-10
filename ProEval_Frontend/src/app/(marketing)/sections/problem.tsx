@@ -32,12 +32,9 @@ export function Problem() {
     >
       <div className="mx-auto w-full max-w-7xl">
         <div className="max-w-3xl">
-          <span className="text-xs font-semibold uppercase tracking-widest text-primary" aria-hidden="true">
-            02
-          </span>
           <h2
             id="problem-heading"
-            className="mt-3 text-3xl font-bold leading-[0.95] tracking-[-0.02em] text-foreground sm:text-4xl lg:text-5xl"
+            className="text-3xl font-bold leading-[0.95] tracking-[-0.02em] text-foreground sm:text-4xl lg:text-5xl"
           >
             The Problem
           </h2>
@@ -49,7 +46,7 @@ export function Problem() {
 
         <div className="mt-10 grid gap-4 sm:mt-12 sm:grid-cols-2 lg:gap-5">
           {problems.map((p) => (
-            <Card key={p.n} className="border-border bg-card py-0">
+            <Card key={p.n} className="border-border bg-card py-0 shadow-sm">
               <CardContent className="p-6 sm:p-7">
                 <span className="text-xs font-semibold uppercase tracking-widest text-primary" aria-hidden="true">
                   {p.n}

@@ -123,10 +123,7 @@ export function StudentJourneyBanner({
   return (
     <div className={`overflow-hidden rounded-[14px] border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_16px_rgba(0,0,0,0.04)] ${className}`}>
       <div className="flex flex-col gap-4 px-5 py-[18px] md:flex-row md:items-center md:justify-between md:px-6">
-        <div className="space-y-1.5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            Project Journey
-          </p>
+        <div>
           <p className="text-[13.5px] font-semibold leading-none tracking-tight text-foreground">
             {hasTeam ? `Current phase — ${currentPhase.replace(/_/g, " ")}` : "No team yet — start with Team Setup"}
           </p>

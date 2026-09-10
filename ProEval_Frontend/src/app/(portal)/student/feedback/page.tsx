@@ -364,8 +364,7 @@ export default function StudentFeedbackPage() {
         {/* Verdict */}
         <section className="overflow-hidden rounded-[14px] border border-border bg-card shadow-sm">
           <div className="border-b border-border px-6 py-6 md:px-7">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{phaseLabel}</p>
-            <h2 className="mt-2 text-[22px] font-bold tracking-tight text-foreground md:text-[24px]">{projectTitle}</h2>
+            <h2 className="text-[22px] font-bold tracking-tight text-foreground md:text-[24px]">{projectTitle}</h2>
             <p className="mt-3 max-w-2xl text-[13.5px] leading-relaxed text-muted-foreground">“{parsed.verdict.summary || "Evaluation completed."}”</p>
           </div>
           <div className="flex flex-col gap-4 px-6 py-4 md:flex-row md:items-center md:justify-between md:px-7">
@@ -536,7 +535,6 @@ export default function StudentFeedbackPage() {
         />
 
         <div className="space-y-2.5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Feedback</p>
           <h1 className="text-[28px] font-bold tracking-tight text-foreground md:text-[32px]">Mentorship & Feedback</h1>
           <p className="max-w-2xl text-[13.5px] leading-relaxed text-muted-foreground md:text-[14px]">
             Structured evaluation of your proposal, architecture and Viva — with clear next steps.

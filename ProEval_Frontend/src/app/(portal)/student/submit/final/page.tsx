@@ -146,8 +146,7 @@ export default function Phase3Submission() {
           <StudentJourneyBanner currentPhase="FINAL" hasTeam={true} isLeader={false} />
 
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Phase 03 — View only</p>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Final Showcase</h1>
+            <h1 className="text-[26px] font-bold tracking-tight text-foreground md:text-[30px]">Final Showcase</h1>
             <p className="text-sm text-muted-foreground">Only the leader can submit final deliverables.</p>
           </div>
 
@@ -197,8 +196,7 @@ export default function Phase3Submission() {
         <StudentJourneyBanner currentPhase="FINAL" hasTeam={true} isLeader={true} />
 
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Phase 03 of 03 — Showcase</p>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Final Showcase</h1>
+          <h1 className="text-[26px] font-bold tracking-tight text-foreground md:text-[30px]">Final Showcase</h1>
           <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
             Submit final report, slides, repository and contribution breakdown. Afterwards the Technical Viva unlocks for all members.
           </p>

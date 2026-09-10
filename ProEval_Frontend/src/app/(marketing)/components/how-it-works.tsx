@@ -22,11 +22,10 @@ function StepItem({
 
 export function HowItWorks() {
   return (
-    <section id="how-it-works" className="bg-muted/30 px-6 py-24">
+    <section id="how-it-works" className="border-t border-border bg-background px-6 py-24">
       <div className="mx-auto max-w-5xl">
         <div className="mb-16">
-          <span className="text-xs font-semibold uppercase tracking-widest text-primary">05</span>
-          <h2 className="mt-3 text-4xl font-bold tracking-tight md:text-5xl">How It Works</h2>
+          <h2 className="text-4xl font-bold tracking-tight md:text-5xl">How It Works</h2>
         </div>
 
         <p className="mb-12 max-w-2xl text-lg leading-relaxed text-muted-foreground">

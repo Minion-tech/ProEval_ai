@@ -67,12 +67,9 @@ export function Workflow() {
       <div className="mx-auto w-full max-w-7xl">
         {/* Header */}
         <div className="max-w-3xl">
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary" aria-hidden="true">
-            Workflow
-          </p>
           <h2
             id="workflow-heading"
-            className="mt-3 text-3xl font-bold leading-[0.95] tracking-[-0.02em] text-foreground sm:text-4xl lg:text-5xl"
+            className="text-3xl font-bold leading-[0.95] tracking-[-0.02em] text-foreground sm:text-4xl lg:text-5xl"
           >
             How a project moves through ProEval
           </h2>
@@ -94,7 +91,7 @@ export function Workflow() {
               return (
                 <li
                   key={step.number}
-                  className="group relative flex flex-col rounded-xl border border-border bg-card p-6 transition-colors duration-200 hover:border-foreground/10 hover:bg-card"
+                  className="group relative flex flex-col rounded-xl border border-border bg-card p-6 shadow-sm transition-colors duration-200 hover:border-border hover:bg-card"
                 >
                   {/* Number + icon row */}
                   <div className="flex items-start justify-between gap-3">
@@ -144,7 +141,7 @@ export function Workflow() {
               return (
                 <li
                   key={step.number}
-                  className="group relative flex gap-4 rounded-xl border border-border bg-card p-5 transition-colors duration-200 hover:border-foreground/10 sm:gap-5 sm:p-6"
+                  className="group relative flex gap-4 rounded-xl border border-border bg-card p-5 shadow-sm transition-colors duration-200 hover:border-border sm:gap-5 sm:p-6"
                 >
                   {/* Left rail: dot + number */}
                   <div className="flex shrink-0 flex-col items-center">

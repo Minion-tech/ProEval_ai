@@ -159,8 +159,7 @@ export default function Phase2Submission() {
           <StudentJourneyBanner currentPhase="PHASE_2" hasTeam={true} isLeader={false} />
 
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Phase 02 — View only</p>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Phase 2 — Architecture</h1>
+            <h1 className="text-[26px] font-bold tracking-tight text-foreground md:text-[30px]">Phase 2 — Architecture</h1>
             <p className="text-sm text-muted-foreground">Only the leader can submit. Details below.</p>
           </div>
 
@@ -206,8 +205,7 @@ export default function Phase2Submission() {
         <StudentJourneyBanner currentPhase="PHASE_2" hasTeam={true} isLeader={true} />
 
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Phase 02 of 03 — Architecture</p>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Architecture & Progress</h1>
+          <h1 className="text-[26px] font-bold tracking-tight text-foreground md:text-[30px]">Architecture & Progress</h1>
           <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
             Link repository, upload architecture slides and describe progress for review.
           </p>

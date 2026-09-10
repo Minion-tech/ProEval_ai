@@ -9,8 +9,10 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-foreground hover:bg-primary/90 font-bold [&_svg]:translate-x-0.5 hover:[&_svg]:translate-x-1",
-        primary: "bg-primary text-foreground hover:bg-primary/90 font-bold [&_svg]:translate-x-0.5 hover:[&_svg]:translate-x-1",
+        default:
+          "bg-primary text-primary-foreground hover:bg-[#171717] hover:text-white transition-colors duration-200 ease-out font-bold [&_svg]:translate-x-0.5 hover:[&_svg]:translate-x-1",
+        primary:
+          "bg-primary text-primary-foreground hover:bg-[#171717] hover:text-white transition-colors duration-200 ease-out font-bold [&_svg]:translate-x-0.5 hover:[&_svg]:translate-x-1",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/90 font-bold [&_svg]:translate-x-0.5 hover:[&_svg]:translate-x-1",
         outline: "border-input bg-card text-foreground hover:bg-muted hover:text-foreground transition-colors duration-200 dark:bg-popover dark:text-foreground dark:hover:bg-muted [&_svg]:translate-x-0.5 hover:[&_svg]:translate-x-1",
         ghost: "text-foreground hover:bg-muted/50 hover:text-foreground dark:text-foreground dark:hover:bg-muted [&_svg]:translate-x-0.5 hover:[&_svg]:translate-x-1",

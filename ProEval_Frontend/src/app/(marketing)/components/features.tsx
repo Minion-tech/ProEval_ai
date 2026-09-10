@@ -12,7 +12,7 @@ export function FeatureCard({
   number: string
 }) {
   return (
-    <Card className="group border-border bg-card py-0 transition-colors duration-200 hover:border-foreground/10">
+    <Card className="group border-border bg-card py-0 shadow-sm transition-colors duration-200 hover:border-border">
       <CardContent className="p-6 sm:p-7">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold uppercase tracking-widest text-primary" aria-hidden="true">

@@ -3,13 +3,13 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Check, Circle, ArrowRight, Clock3, FileText, Users } from "lucide-react"
 
-// Static preview data — no API, no auth, demonstration only
+// Static preview data — mirrors real Student Dashboard, no API
 const preview = {
   projectTitle: "AI-Powered Academic Evaluation Platform",
   teamId: "TEAM-2024-CS-042",
   role: "Leader / Product Manager",
   currentPhase: "PHASE_2",
-  progress: 72,
+  progress: 67,
   phases: [
     { id: "team", step: "Team", title: "Team Setup", status: "completed" as const },
     { id: "phase1", step: "01", title: "Proposal", status: "completed" as const, score: 78 },
@@ -23,8 +23,8 @@ const preview = {
     max: 100,
     status: "In review",
     verdict: "Refine",
-    summary:
-      "Your architecture demonstrates strong separation of concerns and clear component boundaries. Strengthen error handling around evaluation polling and document data flow between phases.",
+    summary: "Your architecture is technically sound, but the data flow needs more clarity.",
+    recommendation: "Add a clear explanation of how requests move between the API and database.",
   },
 }
 
@@ -68,12 +68,9 @@ export function ProductPreview() {
       <div className="mx-auto w-full max-w-7xl">
         {/* Section heading — mirrors hero width/spacing */}
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground sm:text-xs sm:tracking-[0.2em]">
-            See ProEval in action
-          </p>
           <h2
             id="product-preview-heading"
-            className="mx-auto mt-3 max-w-[18ch] text-balance text-3xl font-bold leading-[1.05] tracking-[-0.02em] text-foreground sm:text-4xl lg:text-[2.5rem]"
+            className="mx-auto max-w-[18ch] text-balance text-3xl font-bold leading-[1.05] tracking-[-0.02em] text-foreground sm:text-4xl lg:text-[2.5rem]"
           >
             Project evaluation, organized in one place
           </h2>
@@ -84,9 +81,9 @@ export function ProductPreview() {
 
         {/* Product frame — subtle depth, no neon/glass */}
         <div className="mx-auto mt-10 max-w-5xl sm:mt-12">
-          {/* Outer subtle frame */}
-          <div className="rounded-[20px] border border-border bg-muted/30 p-2 sm:p-3 shadow-sm">
-            {/* Inner dashboard */}
+          {/* Outer subtle frame — neutral canvas depth */}
+          <div className="rounded-[20px] border border-border bg-card p-2 sm:p-3 shadow-sm">
+            {/* Inner dashboard — card surface */}
             <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-sm">
               {/* Dashboard top bar — mimics app header */}
               <div className="flex items-center justify-between gap-3 border-b border-border bg-card px-4 py-3 sm:px-5">
@@ -104,9 +101,9 @@ export function ProductPreview() {
                   </Badge>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="hidden text-xs text-muted-foreground sm:inline">72% Complete</span>
+                  <span className="hidden text-xs text-muted-foreground sm:inline">{preview.progress}% Complete</span>
                   <span className="inline-flex h-6 items-center rounded-full bg-primary px-2.5 text-xs font-semibold text-primary-foreground">
-                    72%
+                    {preview.progress}%
                   </span>
                 </div>
               </div>
@@ -142,8 +139,8 @@ export function ProductPreview() {
                         <span className="font-medium text-muted-foreground">Progress</span>
                         <span className="font-mono text-xs font-medium text-foreground">{preview.progress}%</span>
                       </div>
-                      <Progress value={preview.progress} className="h-1.5 bg-muted" aria-label="Project progress 72 percent" />
-                      <p className="text-xs leading-relaxed text-muted-foreground">Phase 2 — Architecture & Code in progress</p>
+                      <Progress value={preview.progress} className="h-1.5 bg-muted" aria-label={`Project progress ${preview.progress} percent`} />
+                      <p className="text-xs leading-relaxed text-muted-foreground">Phase 2 — Architecture — In Progress</p>
                     </div>
                   </div>
 
@@ -189,15 +186,15 @@ export function ProductPreview() {
                       ))}
                     </ul>
 
-                    {/* Next action — static, not misleadingly clickable */}
+                    {/* AI Guidance — actionable recommendation */}
                     <div className="mt-6 rounded-lg border border-border bg-card p-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Next action</p>
-                      <p className="mt-2 text-sm font-medium leading-snug text-foreground">Submit Phase 2 repository & notes</p>
-                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                        Architecture review is active. Add GitHub URL and milestones to complete.
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">AI Guidance</p>
+                      <p className="mt-2 text-sm font-medium leading-snug text-foreground">“{preview.evaluation.summary}”</p>
+                      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                        <span className="font-medium text-foreground">Recommendation:</span> {preview.evaluation.recommendation}
                       </p>
                       <div className="mt-3 inline-flex h-8 items-center justify-center rounded-md bg-foreground px-3 text-xs font-semibold text-background">
-                        Continue to Phase 2
+                        View recommendation
                         <ArrowRight className="ml-1.5 h-3 w-3" aria-hidden="true" />
                       </div>
                     </div>
@@ -248,15 +245,15 @@ export function ProductPreview() {
                         <Card className="border-amber-200 bg-amber-50/60 py-3 dark:border-amber-900/30 dark:bg-amber-950/20" size="sm">
                           <CardContent className="space-y-1">
                             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Attention</p>
-                            <p className="text-sm font-medium text-foreground">Error handling</p>
-                            <p className="text-xs leading-relaxed text-muted-foreground">Add fallback for polling.</p>
+                            <p className="text-sm font-medium text-foreground">Data flow</p>
+                            <p className="text-xs leading-relaxed text-muted-foreground">Needs more clarity.</p>
                           </CardContent>
                         </Card>
                         <Card className="border-border bg-muted/20 py-3" size="sm">
                           <CardContent className="space-y-1">
-                            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Next step</p>
-                            <p className="text-sm font-medium text-foreground">Document flow</p>
-                            <p className="text-xs leading-relaxed text-muted-foreground">Explain phase transitions.</p>
+                            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Recommendation</p>
+                            <p className="text-sm font-medium text-foreground">Add explanation</p>
+                            <p className="text-xs leading-relaxed text-muted-foreground">API → Database flow.</p>
                           </CardContent>
                         </Card>
                       </div>

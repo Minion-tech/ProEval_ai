@@ -241,9 +241,6 @@ export default function Phase1Submission() {
           <StudentJourneyBanner currentPhase="PHASE_1" latestStatus="AWAITING_CLARIFICATION" hasTeam={true} isLeader={isLeader} />
 
           <div className="space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              Phase 01 — Clarification
-            </p>
             <h1 className="text-[26px] font-bold tracking-tight text-foreground md:text-[30px]">Answer Clarification Questions</h1>
             <p className="max-w-2xl text-[13.5px] leading-relaxed text-muted-foreground">
               Your proposal has {clarificationQuestions.length} questions to clarify scope before evaluation is finalized.
@@ -338,9 +335,6 @@ export default function Phase1Submission() {
           <StudentJourneyBanner currentPhase="PHASE_1" hasTeam={true} isLeader={false} />
 
           <div className="space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              Phase 01 — View only
-            </p>
             <h1 className="text-[26px] font-bold tracking-tight text-foreground md:text-[30px]">Project Proposal</h1>
             <p className="text-[13.5px] leading-relaxed text-muted-foreground">
               Only the leader can edit this proposal. You can review the submitted details.
@@ -399,9 +393,6 @@ export default function Phase1Submission() {
         <StudentJourneyBanner currentPhase="PHASE_1" hasTeam={true} isLeader={true} />
 
         <div className="space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            Phase 01 of 03 — Proposal
-          </p>
           <h1 className="text-[26px] font-bold tracking-tight text-foreground md:text-[30px]">Project Concept</h1>
           <p className="max-w-2xl text-[13.5px] leading-relaxed text-muted-foreground">
             Define title, domain, abstract, methodology and tech stack for review.

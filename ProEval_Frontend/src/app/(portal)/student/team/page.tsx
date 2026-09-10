@@ -62,9 +62,6 @@ export default function StudentTeamPage() {
         <StudentJourneyBanner currentPhase="NO_TEAM" hasTeam={false} />
 
         <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Step 01 — Team Setup
-          </p>
           <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">
             Team Setup
           </h1>
@@ -76,9 +73,6 @@ export default function StudentTeamPage() {
         <div className="grid gap-6 md:grid-cols-2">
           <Card className="flex flex-col border border-border bg-card">
             <div className="space-y-4 p-6 md:p-7">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Leader path
-              </p>
               <h2 className="text-xl font-semibold tracking-tight text-foreground">Create a new team</h2>
               <p className="text-sm leading-relaxed text-muted-foreground">
                 Start a new project, submit the Phase 1 proposal and receive a Team ID to invite teammates.
@@ -110,9 +104,6 @@ export default function StudentTeamPage() {
 
           <Card className="flex flex-col border border-border bg-card">
             <div className="space-y-4 p-6 md:p-7">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Member path
-              </p>
               <h2 className="text-xl font-semibold tracking-tight text-foreground">Join an existing team</h2>
               <p className="text-sm leading-relaxed text-muted-foreground">
                 Join a team created by a classmate. Enter the Team ID and record your role.

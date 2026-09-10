@@ -388,7 +388,6 @@ export default function StudentEnrollmentPage() {
 
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Enrollment</p>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Student & Project Registration</h1>
           <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
             Complete your proposal to create the team workspace.

@@ -170,9 +170,6 @@ export default function MyTeamPage() {
           <section className="overflow-hidden rounded-[14px] border border-border bg-card shadow-sm">
             <div className="flex flex-col gap-5 border-b border-border bg-card px-6 py-6 md:flex-row md:items-start md:justify-between md:px-8 md:py-7">
               <div className="space-y-2.5">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                  Team workspace · Leader
-                </p>
                 <h1 className="text-[22px] font-bold tracking-tight text-foreground md:text-[26px]">
                   {project.phase_1_data?.title || "Project Team Workspace"}
                 </h1>
@@ -285,9 +282,6 @@ export default function MyTeamPage() {
         <section className="overflow-hidden rounded-[14px] border border-border bg-card shadow-sm">
           <div className="flex flex-col gap-5 border-b border-border bg-card px-6 py-6 md:flex-row md:items-start md:justify-between md:px-8 md:py-7">
             <div className="space-y-2.5">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Team workspace · Member
-              </p>
               <h1 className="text-[22px] font-bold tracking-tight text-foreground md:text-[26px]">
                 {project.phase_1_data?.title || "Team Feed"}
               </h1>
