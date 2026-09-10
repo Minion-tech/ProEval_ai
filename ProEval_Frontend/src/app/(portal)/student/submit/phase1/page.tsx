@@ -167,9 +167,29 @@ export default function Phase1Submission() {
           const current = res.data?.project;
           if (current) {
             const evalRes = await projectService.getEvaluation(current.id, "PHASE_1", { testMode: false });
-            if (evalRes.data?.status === "AWAITING_CLARIFICATION" || evalRes.data?.status === "COMPLETED") {
+            if (evalRes.data?.status === "AWAITING_CLARIFICATION") {
               clearInterval(pollInterval);
-              window.location.reload();
+              const logs = evalRes.data.agent_logs || [];
+              let questions: string[] = [];
+              for (const log of logs) {
+                if (log.stage === "clarification" || log.clarification_questions) {
+                  questions = log.clarification_questions || [];
+                  if (questions.length > 0) break;
+                }
+              }
+              if (questions.length === 0) {
+                questions = [
+                  "What specific real-world user or organization will benefit first from this project?",
+                  "What makes this project meaningfully different from common student projects in the same domain?",
+                  "What is the smallest end-to-end version you can realistically complete and demonstrate?",
+                ];
+              }
+              setClarificationQuestions(questions);
+              setClarificationAnswers(new Array(questions.length).fill(""));
+              setEvalStatus("AWAITING_CLARIFICATION");
+            } else if (evalRes.data?.status === "COMPLETED") {
+              clearInterval(pollInterval);
+              router.push("/student/feedback");
             }
           }
         } catch (err) {
@@ -179,8 +199,7 @@ export default function Phase1Submission() {
 
       setTimeout(() => {
         clearInterval(pollInterval);
-        router.push("/student/feedback");
-      }, 15000);
+      }, 30000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit proposal. Please check fields and try again.");
       setSubmitting(false);

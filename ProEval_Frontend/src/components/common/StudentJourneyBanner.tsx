@@ -8,6 +8,7 @@ export interface StudentJourneyBannerProps {
   isLeader?: boolean;
   latestStatus?: string;
   hasTeam?: boolean;
+  projectId?: string;
   className?: string;
 }
 
@@ -16,6 +17,7 @@ export function StudentJourneyBanner({
   isLeader = false,
   latestStatus,
   hasTeam = false,
+  projectId,
   className = "",
 }: StudentJourneyBannerProps) {
   const phaseLower = (currentPhase || "").toLowerCase();
@@ -73,7 +75,7 @@ export function StudentJourneyBanner({
       id: "interview",
       label: "04",
       title: "Viva",
-      href: "/student/feedback",
+      href: projectId ? `/student/interview/${projectId}` : "/student/feedback",
       isDone: interviewDone,
       isCurrent: finalDone,
     },
@@ -109,7 +111,7 @@ export function StudentJourneyBanner({
     nextActionLabel = isLeader ? "Submit Final" : "View Feedback";
   } else {
     nextActionText = "All phases complete — take the Technical Viva";
-    nextActionHref = "/student/feedback";
+    nextActionHref = projectId ? `/student/interview/${projectId}` : "/student/feedback";
     nextActionLabel = "Go to Viva";
   }
 

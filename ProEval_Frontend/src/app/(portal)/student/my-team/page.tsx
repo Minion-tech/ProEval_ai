@@ -3,11 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Copy, Check, Loader2, ArrowRight } from "lucide-react";
+import { Copy, Check, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { projectService, type MyProjectResponse } from "@/lib/project-service";
 import { isTestUserEmail } from "@/lib/portal-mode";
-import Phase1Form from "@/components/forms/Phase1Form";
 import ProjectPhaseCards from "@/components/submission/ProjectPhaseCards";
 import { StudentJourneyBanner } from "@/components/common/StudentJourneyBanner";
 import { Button } from "@/components/ui/button";
@@ -72,6 +71,7 @@ export default function MyTeamPage() {
           isLeader={isLeader}
           latestStatus={latest_evaluation_status ?? undefined}
           hasTeam={true}
+          projectId={project.id}
         />
 
         <section className="rounded-xl border border-border bg-card">
@@ -143,23 +143,6 @@ export default function MyTeamPage() {
               <Button variant="outline" asChild className="h-9">
                 <Link href="/student/feedback">View Feedback</Link>
               </Button>
-              {isLeader && (
-                <Button asChild className="group h-9 gap-1.5 bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
-                  <Link
-                    href={
-                      project.current_phase === "PHASE_2"
-                        ? "/student/submit/phase2"
-                        : project.current_phase === "FINAL"
-                          ? "/student/submit/final"
-                          : "/student/submit/phase1"
-                    }
-                    className="inline-flex items-center gap-1.5"
-                  >
-                    Continue Submission
-                    <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
-                  </Link>
-                </Button>
-              )}
             </div>
           </CardContent>
         </section>
@@ -179,15 +162,7 @@ export default function MyTeamPage() {
             isLeader={isLeader}
           />
 
-          {isLeader ? (
-            <div className="space-y-4 border-t border-border pt-8">
-              <div className="space-y-1">
-                <h3 className="text-base font-semibold tracking-tight text-foreground">Phase 1 — Proposal</h3>
-                <p className="text-sm text-muted-foreground">As leader you can edit and resubmit the proposal after review.</p>
-              </div>
-              <Phase1Form />
-            </div>
-          ) : (
+          {!isLeader && (
             <Card className="border border-dashed border-border bg-muted/20">
               <CardContent className="space-y-3 px-6 py-8 text-center">
                 <h3 className="text-sm font-semibold text-foreground">Member access</h3>

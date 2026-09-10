@@ -532,6 +532,7 @@ export default function StudentFeedbackPage() {
           isLeader={isLeader}
           latestStatus={(projectData as { latest_evaluation_status?: string })?.latest_evaluation_status}
           hasTeam={!!project}
+          projectId={project?.id}
         />
 
         <div className="space-y-3">

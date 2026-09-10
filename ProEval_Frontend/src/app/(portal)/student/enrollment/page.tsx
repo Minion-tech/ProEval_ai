@@ -442,7 +442,6 @@ export default function StudentEnrollmentPage() {
                 <div className="p-8 text-center space-y-4">
                     <h3 className="text-xl font-semibold">Joined Team: {existingProject?.project?.team_id}</h3>
                     <p>You are a member of this team. Only the Team Leader can submit project details for any phase.</p>
-                    <Button onClick={() => router.push("/student/my-team")}>View Team Progress</Button>
                 </div>
             ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">
