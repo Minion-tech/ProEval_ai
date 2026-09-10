@@ -222,17 +222,17 @@ export default function Phase1Submission() {
   if (loadingProject) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-foreground" />
         <p className="text-sm text-muted-foreground">Loading workspace</p>
       </div>
     );
   }
 
-  if (evalStatus === "AWAITING_CLARIFICATION") {
+  if (evalStatus === "AWAITING_CLARIFICATION" && isLeader) {
     return (
       <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8 md:py-12">
-        <div className="space-y-8">
-          <Button variant="ghost" asChild className="-ml-2 h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+        <div className="space-y-7">
+          <Button variant="ghost" asChild className="-ml-2 h-8 gap-1.5 rounded-full text-xs text-muted-foreground hover:text-foreground">
             <Link href="/student/my-team">
               <ArrowLeft className="h-3.5 w-3.5" /> Back to Team
             </Link>
@@ -241,30 +241,35 @@ export default function Phase1Submission() {
           <StudentJourneyBanner currentPhase="PHASE_1" latestStatus="AWAITING_CLARIFICATION" hasTeam={true} isLeader={isLeader} />
 
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               Phase 01 — Clarification
             </p>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Answer Clarification Questions</h1>
-            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            <h1 className="text-[26px] font-bold tracking-tight text-foreground md:text-[30px]">Answer Clarification Questions</h1>
+            <p className="max-w-2xl text-[13.5px] leading-relaxed text-muted-foreground">
               Your proposal has {clarificationQuestions.length} questions to clarify scope before evaluation is finalized.
             </p>
           </div>
 
-          <section className="overflow-hidden rounded-xl border border-border bg-card">
-            <div className="flex items-center justify-between border-b border-border bg-muted/20 px-6 py-4">
-              <p className="text-sm font-medium text-foreground">
-                Question {currentQuestionIdx + 1} of {clarificationQuestions.length}
-              </p>
-              <Button variant="ghost" size="sm" onClick={handleAutofillClarifications} className="h-7 text-xs">
+          <section className="overflow-hidden rounded-[14px] border border-border bg-card shadow-sm">
+            <div className="flex items-center justify-between border-b border-border bg-muted/20 px-6 py-3.5">
+              <div className="flex items-center gap-3">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-foreground text-[11px] font-semibold text-background">
+                  {currentQuestionIdx + 1}
+                </span>
+                <p className="text-[13px] font-medium text-foreground">
+                  Question {currentQuestionIdx + 1} of {clarificationQuestions.length}
+                </p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={handleAutofillClarifications} className="h-7 rounded-full px-3 text-xs">
                 Autofill demo
               </Button>
             </div>
             <div className="space-y-6 p-6 md:p-8">
-              <p className="text-base font-medium leading-relaxed text-foreground md:text-lg">
+              <p className="text-[15px] font-medium leading-relaxed text-foreground md:text-[16px]">
                 {clarificationQuestions[currentQuestionIdx]}
               </p>
               <Textarea
-                className="min-h-[140px]"
+                className="min-h-[140px] rounded-xl border-border bg-card text-[13.5px] placeholder:text-muted-foreground/60 focus-visible:ring-primary/20"
                 placeholder="Write your answer clearly..."
                 value={clarificationAnswers[currentQuestionIdx] || ""}
                 onChange={(e) => {
@@ -278,35 +283,43 @@ export default function Phase1Submission() {
                   variant="outline"
                   onClick={() => setCurrentQuestionIdx((v) => Math.max(0, v - 1))}
                   disabled={currentQuestionIdx === 0}
-                  className="h-9"
+                  className="h-9 rounded-full px-4"
                 >
-                  <ChevronLeft className="mr-1.5 h-4 w-4" /> Previous
+                  <ChevronLeft className="mr-1 h-4 w-4" /> Previous
                 </Button>
 
                 {currentQuestionIdx < clarificationQuestions.length - 1 ? (
                   <Button
                     onClick={() => setCurrentQuestionIdx((v) => v + 1)}
                     disabled={!(clarificationAnswers[currentQuestionIdx] || "").trim()}
-                    className="h-9 bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
+                    className="h-9 rounded-full bg-primary px-5 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
                   >
                     Next
-                    <ChevronRight className="ml-1.5 h-4 w-4" />
+                    <ChevronRight className="ml-1 h-4 w-4" />
                   </Button>
                 ) : (
                   <Button
                     onClick={handleClarificationSubmit}
                     disabled={submitting || clarificationAnswers.some((a) => !(a || "").trim())}
-                    className="h-9 bg-primary px-6 font-semibold text-primary-foreground hover:bg-primary/90"
+                    className="h-9 rounded-full bg-primary px-6 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
                   >
                     {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Submit Answers
                   </Button>
                 )}
               </div>
+              <div className="flex justify-center gap-1.5 pt-1">
+                {clarificationQuestions.map((_, i) => (
+                  <span
+                    key={i}
+                    className={`h-1.5 rounded-full transition-all duration-300 ${i === currentQuestionIdx ? "w-6 bg-primary" : i < currentQuestionIdx ? "w-1.5 bg-foreground" : "w-1.5 bg-border"}`}
+                  />
+                ))}
+              </div>
             </div>
           </section>
 
-          {error && <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div>}
+          {error && <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">{error}</div>}
         </div>
       </main>
     );
@@ -315,8 +328,8 @@ export default function Phase1Submission() {
   if (!isLeader) {
     return (
       <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8 md:py-12">
-        <div className="space-y-8">
-          <Button variant="ghost" asChild className="-ml-2 h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+        <div className="space-y-7">
+          <Button variant="ghost" asChild className="-ml-2 h-8 gap-1.5 rounded-full text-xs text-muted-foreground hover:text-foreground">
             <Link href="/student/my-team">
               <ArrowLeft className="h-3.5 w-3.5" /> Back to Team
             </Link>
@@ -325,45 +338,47 @@ export default function Phase1Submission() {
           <StudentJourneyBanner currentPhase="PHASE_1" hasTeam={true} isLeader={false} />
 
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               Phase 01 — View only
             </p>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Project Proposal</h1>
-            <p className="text-sm leading-relaxed text-muted-foreground">
+            <h1 className="text-[26px] font-bold tracking-tight text-foreground md:text-[30px]">Project Proposal</h1>
+            <p className="text-[13.5px] leading-relaxed text-muted-foreground">
               Only the leader can edit this proposal. You can review the submitted details.
             </p>
           </div>
 
-          <Card className="border border-border bg-card">
-            <div className="border-b border-border px-6 py-4">
-              <h2 className="text-sm font-semibold tracking-tight text-foreground">Submitted details</h2>
+          <Card className="overflow-hidden rounded-[14px] border border-border bg-card shadow-sm">
+            <div className="border-b border-border bg-muted/20 px-6 py-4">
+              <h2 className="text-[13px] font-semibold tracking-tight text-foreground">Submitted details</h2>
             </div>
             <CardContent className="space-y-6 p-6 text-sm">
-              <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Title</p>
-                <p className="font-medium text-foreground">{formData.title || "—"}</p>
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Title</p>
+                  <p className="text-[13.5px] font-medium text-foreground">{formData.title || "—"}</p>
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Domain</p>
+                  <p className="text-[13.5px] font-medium text-foreground">{formData.domain || "—"}</p>
+                </div>
               </div>
-              <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Domain</p>
-                <p className="font-medium text-foreground">{formData.domain || "—"}</p>
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Abstract</p>
+                <p className="text-[13.5px] leading-relaxed text-muted-foreground">{formData.objective || "—"}</p>
               </div>
-              <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Abstract</p>
-                <p className="leading-relaxed text-muted-foreground">{formData.objective || "—"}</p>
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Methodology</p>
+                <p className="text-[13.5px] leading-relaxed text-muted-foreground">{formData.methodology || "—"}</p>
               </div>
-              <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Methodology</p>
-                <p className="leading-relaxed text-muted-foreground">{formData.methodology || "—"}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Tech stack</p>
-                <p className="whitespace-pre-wrap leading-relaxed text-muted-foreground">{formData.techStack || "—"}</p>
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Tech stack</p>
+                <p className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-muted-foreground">{formData.techStack || "—"}</p>
               </div>
             </CardContent>
           </Card>
 
           <div className="flex justify-end">
-            <Button asChild className="bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
+            <Button asChild className="h-9 rounded-full bg-primary px-5 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90">
               <Link href="/student/feedback">View Feedback</Link>
             </Button>
           </div>
@@ -374,8 +389,8 @@ export default function Phase1Submission() {
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8 md:py-12">
-      <div className="space-y-8">
-        <Button variant="ghost" asChild className="-ml-2 h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+      <div className="space-y-7">
+        <Button variant="ghost" asChild className="-ml-2 h-8 gap-1.5 rounded-full text-xs text-muted-foreground hover:text-foreground">
           <Link href="/student/my-team">
             <ArrowLeft className="h-3.5 w-3.5" /> Back to Team
           </Link>
@@ -384,24 +399,25 @@ export default function Phase1Submission() {
         <StudentJourneyBanner currentPhase="PHASE_1" hasTeam={true} isLeader={true} />
 
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Phase 01 of 03 — Proposal
           </p>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Project Concept</h1>
-          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          <h1 className="text-[26px] font-bold tracking-tight text-foreground md:text-[30px]">Project Concept</h1>
+          <p className="max-w-2xl text-[13.5px] leading-relaxed text-muted-foreground">
             Define title, domain, abstract, methodology and tech stack for review.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <Card className="border border-border bg-card">
-            <div className="border-b border-border px-6 py-4">
-              <h2 className="text-sm font-semibold tracking-tight text-foreground">Project essentials</h2>
+          <Card className="overflow-hidden rounded-[14px] border border-border bg-card shadow-sm">
+            <div className="border-b border-border bg-card px-6 py-4">
+              <h2 className="text-[13.5px] font-semibold tracking-tight text-foreground">Project essentials</h2>
+              <p className="mt-1 text-xs text-muted-foreground">All fields are required unless marked optional.</p>
             </div>
             <CardContent className="space-y-6 p-6">
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid gap-5 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="title" className="text-sm font-medium">
+                  <Label htmlFor="title" className="text-[13px] font-medium">
                     Project title <span className="text-destructive">*</span>
                   </Label>
                   <Input
@@ -410,12 +426,13 @@ export default function Phase1Submission() {
                     placeholder="ProEval: AI-Powered Academic Evaluation"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    className="h-9 rounded-xl border-border bg-card text-[13.5px]"
                   />
                   <p className="text-xs text-muted-foreground">Descriptive title.</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="domain" className="text-sm font-medium">
+                  <Label htmlFor="domain" className="text-[13px] font-medium">
                     Domain <span className="text-destructive">*</span>
                   </Label>
                   <Input
@@ -424,13 +441,14 @@ export default function Phase1Submission() {
                     placeholder="Artificial Intelligence / Web Tech"
                     value={formData.domain}
                     onChange={(e) => setFormData({ ...formData, domain: e.target.value })}
+                    className="h-9 rounded-xl border-border bg-card text-[13.5px]"
                   />
                   <p className="text-xs text-muted-foreground">Example: Computer Vision, Cloud</p>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="objective" className="text-sm font-medium">
+                <Label htmlFor="objective" className="text-[13px] font-medium">
                   Abstract & objectives <span className="text-destructive">*</span>
                 </Label>
                 <Textarea
@@ -440,6 +458,7 @@ export default function Phase1Submission() {
                   placeholder="Describe problem, goals and expected outcomes..."
                   value={formData.objective}
                   onChange={(e) => setFormData({ ...formData, objective: e.target.value })}
+                  className="rounded-xl border-border bg-card text-[13.5px] placeholder:text-muted-foreground/60"
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>Problem, audience and outcome.</span>
@@ -449,9 +468,9 @@ export default function Phase1Submission() {
                 </div>
               </div>
 
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid gap-5 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="methodology" className="text-sm font-medium">
+                  <Label htmlFor="methodology" className="text-[13px] font-medium">
                     Methodology <span className="text-destructive">*</span>
                   </Label>
                   <Textarea
@@ -461,28 +480,32 @@ export default function Phase1Submission() {
                     placeholder="Design, modules, algorithm pipeline..."
                     value={formData.methodology}
                     onChange={(e) => setFormData({ ...formData, methodology: e.target.value })}
+                    className="rounded-xl border-border bg-card text-[13.5px] placeholder:text-muted-foreground/60"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="useCaseDiagram" className="text-sm font-medium">
+                  <Label htmlFor="useCaseDiagram" className="text-[13px] font-medium">
                     Use case / architecture diagram
                   </Label>
-                  <Input
-                    id="useCaseDiagram"
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                    required={!formData.useCaseDiagram}
-                    onChange={handleUseCaseDiagramUpload}
-                  />
-                  <p className={`text-xs ${formData.useCaseDiagram ? "font-medium text-foreground" : "text-muted-foreground"}`}>
-                    {formData.useCaseDiagramName || "PNG, JPG, WebP or SVG — max 1 MB."}
-                  </p>
+                  <div className="rounded-xl border border-dashed border-border bg-muted/10 p-4">
+                    <Input
+                      id="useCaseDiagram"
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                      required={!formData.useCaseDiagram}
+                      onChange={handleUseCaseDiagramUpload}
+                      className="h-9 rounded-lg border-border bg-card text-xs file:text-xs"
+                    />
+                    <p className={`mt-2 text-xs ${formData.useCaseDiagram ? "font-medium text-foreground" : "text-muted-foreground"}`}>
+                      {formData.useCaseDiagramName || "PNG, JPG, WebP or SVG — max 1 MB."}
+                    </p>
+                  </div>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="techStack" className="text-sm font-medium">
+                <Label htmlFor="techStack" className="text-[13px] font-medium">
                   Tech stack — one per line <span className="text-destructive">*</span>
                 </Label>
                 <Textarea
@@ -492,19 +515,20 @@ export default function Phase1Submission() {
                   placeholder={"Next.js\nFastAPI\nPostgreSQL"}
                   value={formData.techStack}
                   onChange={(e) => setFormData({ ...formData, techStack: e.target.value })}
+                  className="rounded-xl border-border bg-card text-[13.5px] placeholder:text-muted-foreground/60"
                 />
                 <p className="text-xs text-muted-foreground">Frameworks, languages, databases, cloud.</p>
               </div>
             </CardContent>
           </Card>
 
-          {error && <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div>}
+          {error && <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">{error}</div>}
 
           <div className="flex justify-end gap-3 border-t border-border pt-6">
-            <Button variant="outline" type="button" asChild className="h-9">
+            <Button variant="outline" type="button" asChild className="h-9 rounded-full px-5 text-[13px]">
               <Link href="/student/my-team">Cancel</Link>
             </Button>
-            <Button type="submit" disabled={submitting} className="h-9 min-w-[160px] bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
+            <Button type="submit" disabled={submitting} className="h-9 min-w-[160px] rounded-full bg-primary font-semibold text-primary-foreground shadow-sm hover:bg-primary/90">
               {submitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

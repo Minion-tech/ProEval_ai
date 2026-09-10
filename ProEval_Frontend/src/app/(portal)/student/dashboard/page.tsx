@@ -105,11 +105,16 @@ export default function StudentDashboardPage() {
       primaryCtaText = isLeader ? "Submit Phase 2" : "View Feedback";
       primaryCtaHref = isLeader ? "/student/submit/phase2" : "/student/feedback";
     } else {
-      if (projectData?.latest_evaluation_status === "AWAITING_CLARIFICATION") {
+      if (projectData?.latest_evaluation_status === "AWAITING_CLARIFICATION" && isLeader) {
         humanPhase = "Phase 1 — Clarification Needed";
         phaseDescription = "A few clarifying questions are waiting before evaluation can be finalized.";
         primaryCtaText = "Answer Questions";
         primaryCtaHref = "/student/submit/phase1";
+      } else if (projectData?.latest_evaluation_status === "AWAITING_CLARIFICATION" && !isLeader) {
+        humanPhase = "Phase 1 — Under Review";
+        phaseDescription = "Your proposal is being reviewed. Leader will handle any clarification if needed.";
+        primaryCtaText = "View Team";
+        primaryCtaHref = "/student/my-team";
       } else {
         humanPhase = "Phase 1 — Project Proposal";
         phaseDescription = isLeader
@@ -123,23 +128,23 @@ export default function StudentDashboardPage() {
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8 md:py-12">
-      <div className="space-y-10 md:space-y-12">
+      <div className="space-y-8 md:space-y-10">
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          <div className="space-y-2.5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               Dashboard
             </p>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+            <h1 className="text-[28px] font-bold tracking-tight text-foreground md:text-[32px]">
               {isTestUser ? "Testing Workspace" : "Project Home"}
             </h1>
-            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
+            <p className="max-w-2xl text-[13.5px] leading-relaxed text-muted-foreground md:text-[14px]">
               {isTestUser
                 ? "Validate the full evaluation pipeline in an isolated workspace."
                 : "Track progress, understand what matters now, and take the next step."}
             </p>
             {!isTestUser && user?.name && (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-[13px] text-muted-foreground">
                 Signed in as <span className="font-medium text-foreground">{user.name}</span>
               </p>
             )}
@@ -148,7 +153,7 @@ export default function StudentDashboardPage() {
             variant="ghost"
             size="sm"
             onClick={fetchData}
-            className="h-8 self-start gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+            className="h-8 self-start gap-1.5 rounded-full text-xs font-medium text-muted-foreground hover:text-foreground"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             Refresh
@@ -179,17 +184,17 @@ export default function StudentDashboardPage() {
         />
 
         {/* Primary Next Step */}
-        <section className="rounded-xl border border-border bg-card">
-          <div className="px-5 py-6 md:px-8 md:py-8">
+        <section className="overflow-hidden rounded-[14px] border border-border bg-card shadow-sm">
+          <div className="px-6 py-7 md:px-8 md:py-8">
             <div className="space-y-6">
-              <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              <div className="space-y-2.5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                   Next step
                 </p>
-                <h2 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">
+                <h2 className="text-[22px] font-bold tracking-tight text-foreground md:text-[26px]">
                   {humanPhase}
                 </h2>
-                <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
+                <p className="max-w-2xl text-[13.5px] leading-relaxed text-muted-foreground">
                   {phaseDescription}
                 </p>
               </div>
@@ -197,7 +202,7 @@ export default function StudentDashboardPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <Button
                   asChild
-                  className="group h-9 gap-1.5 bg-primary px-5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+                  className="group h-9 gap-1.5 rounded-full bg-primary px-5 text-[13.5px] font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
                 >
                   <Link href={primaryCtaHref} className="inline-flex items-center gap-1.5">
                     {primaryCtaText}
@@ -206,11 +211,11 @@ export default function StudentDashboardPage() {
                 </Button>
 
                 {activeProject ? (
-                  <Button variant="outline" asChild className="h-9 text-sm">
+                  <Button variant="outline" asChild className="h-9 rounded-full px-5 text-[13px]">
                     <Link href="/student/feedback">View Feedback</Link>
                   </Button>
                 ) : (
-                  <Button variant="outline" asChild className="h-9 text-sm">
+                  <Button variant="outline" asChild className="h-9 rounded-full px-5 text-[13px]">
                     <Link href="/student/team/join">Join with Team ID</Link>
                   </Button>
                 )}
@@ -220,7 +225,7 @@ export default function StudentDashboardPage() {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDelete(activeProject.id)}
-                    className="ml-auto h-8 gap-1.5 text-xs text-muted-foreground hover:text-destructive"
+                    className="ml-auto h-8 gap-1.5 rounded-full text-xs text-muted-foreground hover:text-destructive"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                     Reset
@@ -229,9 +234,9 @@ export default function StudentDashboardPage() {
               </div>
 
               {activeProject && (
-                <div className="flex flex-wrap gap-x-6 gap-y-2 border-t border-border pt-6 text-xs">
+                <div className="flex flex-wrap gap-x-6 gap-y-2 border-t border-border/60 pt-5 text-xs">
                   <span className="text-muted-foreground">
-                    Team <span className="font-mono font-medium text-foreground">{activeProject.team_id}</span>
+                    Team <span className="font-mono text-[13px] font-medium text-foreground">{activeProject.team_id}</span>
                   </span>
                   <span className="text-muted-foreground">
                     Role <span className="font-medium text-foreground">{isLeader ? "Leader" : "Member"}</span>
@@ -248,18 +253,18 @@ export default function StudentDashboardPage() {
         {activeProject &&
           projectData?.user_role === "Leader / Product Manager" &&
           projectData?.latest_evaluation_status === "AWAITING_CLARIFICATION" && (
-            <div className="flex flex-col gap-4 rounded-xl border border-border bg-card px-5 py-5 md:flex-row md:items-center md:justify-between md:px-6">
+            <div className="flex flex-col gap-4 rounded-[14px] border border-amber-200 bg-amber-50/50 px-6 py-5 md:flex-row md:items-center md:justify-between dark:border-amber-900/30 dark:bg-amber-950/20">
               <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-amber-700 dark:text-amber-400">
                   Attention required
                 </p>
-                <h3 className="text-base font-semibold text-foreground">Clarification questions waiting</h3>
-                <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
+                <h3 className="text-[15px] font-semibold tracking-tight text-foreground">Clarification questions waiting</h3>
+                <p className="max-w-xl text-[13px] leading-relaxed text-muted-foreground">
                   The reviewer needs three short answers to clarify scope before finalizing Phase 1.
                 </p>
               </div>
               <Button
-                className="h-9 shrink-0 bg-foreground px-5 text-sm font-semibold text-background hover:bg-foreground/90"
+                className="h-9 shrink-0 rounded-full bg-foreground px-5 text-[13px] font-semibold text-background hover:bg-foreground/90 shadow-sm"
                 onClick={() => router.push("/student/submit/phase1")}
               >
                 Answer Questions
@@ -269,11 +274,11 @@ export default function StudentDashboardPage() {
           )}
 
         {/* Status Overview — calm, divider-based */}
-        <section className="overflow-hidden rounded-xl border border-border bg-card">
-          <div className="grid grid-cols-1 divide-y divide-border sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x">
+        <section className="overflow-hidden rounded-[14px] border border-border bg-card shadow-sm">
+          <div className="grid grid-cols-1 divide-y divide-border/60 sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x lg:divide-border/60">
             <div className="px-6 py-6">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Where you are</p>
-              <p className="mt-3 text-base font-semibold tracking-tight text-foreground">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Where you are</p>
+              <p className="mt-3 text-[15px] font-semibold tracking-tight text-foreground">
                 {activeProject ? humanPhase.split(" — ")[0] : "Team Setup"}
               </p>
               <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
@@ -283,8 +288,8 @@ export default function StudentDashboardPage() {
               </p>
             </div>
             <div className="px-6 py-6">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Completed</p>
-              <ul className="mt-3 space-y-1.5 text-sm leading-relaxed">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Completed</p>
+              <ul className="mt-3 space-y-1.5 text-[13px] leading-relaxed">
                 <li className="flex items-center gap-2 text-foreground">
                   <span className="h-1 w-1 rounded-full bg-foreground" /> Enrollment
                 </li>
@@ -299,19 +304,19 @@ export default function StudentDashboardPage() {
               </ul>
             </div>
             <div className="px-6 py-6">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Up next</p>
-              <ul className="mt-3 space-y-1.5 text-sm text-muted-foreground">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Up next</p>
+              <ul className="mt-3 space-y-1.5 text-[13px] text-muted-foreground">
                 {!activeProject?.phase_2_data && <li>Phase 2 — Architecture</li>}
                 {!activeProject?.final_data && <li>Phase 3 — Showcase</li>}
                 <li>Technical Viva</li>
               </ul>
             </div>
-            <div className="bg-muted/30 px-6 py-6">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">What to do now</p>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+            <div className="bg-muted/20 px-6 py-6">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">What to do now</p>
+              <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">
                 {activeProject ? "Take the next step to move the project forward." : "Create or join a team to unlock the workflow."}
               </p>
-              <Button asChild size="sm" className="mt-4 h-8 bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/90">
+              <Button asChild size="sm" className="mt-4 h-8 rounded-full bg-primary px-4 text-xs font-semibold text-primary-foreground hover:bg-primary/90">
                 <Link href={primaryCtaHref}>{primaryCtaText}</Link>
               </Button>
             </div>
@@ -319,29 +324,29 @@ export default function StudentDashboardPage() {
         </section>
 
         {/* Guidance — two quiet sections */}
-        <div className="grid gap-6 md:grid-cols-2">
-          <section className="rounded-xl border border-border bg-card">
-            <div className="border-b border-border px-6 py-4">
-              <h3 className="text-sm font-semibold tracking-tight text-foreground">Team workspace</h3>
+        <div className="grid gap-5 md:grid-cols-2">
+          <section className="overflow-hidden rounded-[14px] border border-border bg-card shadow-sm">
+            <div className="border-b border-border bg-card px-6 py-4">
+              <h3 className="text-[13.5px] font-semibold tracking-tight text-foreground">Team workspace</h3>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">How leaders and members collaborate.</p>
             </div>
             <div className="space-y-4 px-6 py-6">
               <div className="space-y-1.5">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Leader</p>
-                <p className="text-sm leading-relaxed text-muted-foreground">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Leader</p>
+                <p className="text-[13px] leading-relaxed text-muted-foreground">
                   Creates the team, submits all phase deliverables, and shares the Team ID.
                 </p>
               </div>
-              <div className="h-px bg-border" />
+              <div className="h-px bg-border/60" />
               <div className="space-y-1.5">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Member</p>
-                <p className="text-sm leading-relaxed text-muted-foreground">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Member</p>
+                <p className="text-[13px] leading-relaxed text-muted-foreground">
                   Joins with Team ID, records contributions, and reviews shared feedback.
                 </p>
               </div>
               <Button
                 variant="outline"
-                className="mt-2 w-full h-9"
+                className="mt-2 w-full h-9 rounded-full text-[13px]"
                 onClick={() => router.push(activeProject ? "/student/my-team" : "/student/team")}
               >
                 {activeProject ? "Open Team Workspace" : "Start Team Setup"}
@@ -350,9 +355,9 @@ export default function StudentDashboardPage() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-border bg-card">
-            <div className="border-b border-border px-6 py-4">
-              <h3 className="text-sm font-semibold tracking-tight text-foreground">How evaluation works</h3>
+          <section className="overflow-hidden rounded-[14px] border border-border bg-card shadow-sm">
+            <div className="border-b border-border bg-card px-6 py-4">
+              <h3 className="text-[13.5px] font-semibold tracking-tight text-foreground">How evaluation works</h3>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Three phases, one Viva.</p>
             </div>
             <div className="px-6 py-6">
@@ -362,7 +367,7 @@ export default function StudentDashboardPage() {
                     1
                   </span>
                   <div>
-                    <p className="text-sm font-medium text-foreground">Phase 1 — Proposal</p>
+                    <p className="text-[13.5px] font-medium text-foreground">Phase 1 — Proposal</p>
                     <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Scope, originality and clarity. Clarification asked if needed.</p>
                   </div>
                 </li>
@@ -371,7 +376,7 @@ export default function StudentDashboardPage() {
                     2
                   </span>
                   <div>
-                    <p className="text-sm font-medium text-foreground">Phase 2 — Architecture</p>
+                    <p className="text-[13.5px] font-medium text-foreground">Phase 2 — Architecture</p>
                     <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Repository structure, presentation and milestones.</p>
                   </div>
                 </li>
@@ -380,12 +385,12 @@ export default function StudentDashboardPage() {
                     3
                   </span>
                   <div>
-                    <p className="text-sm font-medium text-foreground">Final & Viva</p>
+                    <p className="text-[13.5px] font-medium text-foreground">Final & Viva</p>
                     <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Consolidated review plus 5-minute technical Viva.</p>
                   </div>
                 </li>
               </ol>
-              <Button variant="outline" className="mt-6 w-full h-9" onClick={() => router.push("/student/feedback")}>
+              <Button variant="outline" className="mt-6 w-full h-9 rounded-full text-[13px]" onClick={() => router.push("/student/feedback")}>
                 View Feedback
                 <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
               </Button>

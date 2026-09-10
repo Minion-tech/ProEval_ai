@@ -360,25 +360,25 @@ export default function StudentFeedbackPage() {
     };
 
     return (
-      <div className="space-y-8">
+      <div className="space-y-7">
         {/* Verdict */}
-        <section className="rounded-xl border border-border bg-card">
-          <div className="border-b border-border px-6 py-5">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{phaseLabel}</p>
-            <h2 className="mt-2 text-2xl font-bold tracking-tight text-foreground">{projectTitle}</h2>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">“{parsed.verdict.summary || "Evaluation completed."}”</p>
+        <section className="overflow-hidden rounded-[14px] border border-border bg-card shadow-sm">
+          <div className="border-b border-border px-6 py-6 md:px-7">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{phaseLabel}</p>
+            <h2 className="mt-2 text-[22px] font-bold tracking-tight text-foreground md:text-[24px]">{projectTitle}</h2>
+            <p className="mt-3 max-w-2xl text-[13.5px] leading-relaxed text-muted-foreground">“{parsed.verdict.summary || "Evaluation completed."}”</p>
           </div>
-          <div className="flex flex-col gap-4 px-6 py-5 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-3">
-              <Badge variant="outline" className="border-border font-mono text-xs font-medium">
+          <div className="flex flex-col gap-4 px-6 py-4 md:flex-row md:items-center md:justify-between md:px-7">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Badge variant="outline" className="rounded-full border-border bg-muted/30 px-2.5 py-1 font-mono text-[11px] font-semibold tracking-wide">
                 {parsed.verdict.label}
               </Badge>
-              <span className="text-sm text-muted-foreground">
-                Score <span className="font-medium text-foreground">{parsed.verdict.score}/100</span>
+              <span className="text-[13px] text-muted-foreground">
+                Score <span className="font-semibold tabular-nums text-foreground">{parsed.verdict.score}/100</span>
               </span>
               <span className="hidden text-xs text-muted-foreground md:inline">· {formattedDate}</span>
             </div>
-            <Button size="sm" variant="outline" onClick={downloadReport} className="h-8 w-fit gap-1.5 text-xs">
+            <Button size="sm" variant="outline" onClick={downloadReport} className="h-8 w-fit rounded-full gap-1.5 px-4 text-xs font-medium">
               <Download className="h-3.5 w-3.5" /> Download report
             </Button>
           </div>
@@ -386,45 +386,45 @@ export default function StudentFeedbackPage() {
 
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.9fr]">
           <div className="space-y-6">
-            <Card className="border border-border bg-card">
-              <CardContent className="space-y-4 p-6">
-                <h3 className="text-sm font-semibold tracking-tight text-foreground">Overview</h3>
-                <p className="text-sm leading-relaxed text-muted-foreground">{parsed.verdict.summary || "Evaluation available. See detailed sections for guidance."}</p>
+            <Card className="overflow-hidden rounded-[14px] border border-border bg-card shadow-sm">
+              <CardContent className="space-y-3 p-6">
+                <h3 className="text-[13px] font-semibold tracking-tight text-foreground">Overview</h3>
+                <p className="text-[13.5px] leading-relaxed text-muted-foreground">{parsed.verdict.summary || "Evaluation available. See detailed sections for guidance."}</p>
               </CardContent>
             </Card>
 
             {phaseKey === "PHASE_1" ? (
               <div className="space-y-4">
                 {item.agent_logs?.some((l) => l.agent === "Ideator") && (
-                  <Card className="border border-border bg-card">
-                    <CardContent className="space-y-4 p-6">
-                      <h3 className="text-sm font-semibold tracking-tight text-foreground">Concept review</h3>
-                      <p className="text-sm leading-relaxed text-muted-foreground">
+                  <Card className="overflow-hidden rounded-[14px] border border-border bg-card shadow-sm">
+                    <CardContent className="space-y-3 p-6">
+                      <h3 className="text-[13px] font-semibold tracking-tight text-foreground">Concept review</h3>
+                      <p className="text-[13.5px] leading-relaxed text-muted-foreground">
                         {(item.agent_logs.find((l) => l.agent === "Ideator")?.reasoning as string) || ""}
                       </p>
                     </CardContent>
                   </Card>
                 )}
                 {item.agent_logs?.some((l) => l.agent === "Architect") ? (
-                  <Card className="border border-border bg-card">
-                    <CardContent className="space-y-4 p-6">
-                      <h3 className="text-sm font-semibold tracking-tight text-foreground">Technical review</h3>
-                      <p className="text-sm leading-relaxed text-muted-foreground">
+                  <Card className="overflow-hidden rounded-[14px] border border-border bg-card shadow-sm">
+                    <CardContent className="space-y-3 p-6">
+                      <h3 className="text-[13px] font-semibold tracking-tight text-foreground">Technical review</h3>
+                      <p className="text-[13.5px] leading-relaxed text-muted-foreground">
                         {(item.agent_logs.find((l) => l.agent === "Architect")?.reasoning as string) || ""}
                       </p>
                     </CardContent>
                   </Card>
                 ) : (
-                  <div className="rounded-xl border border-dashed border-border bg-muted/20 px-6 py-8 text-center">
-                    <p className="text-sm font-medium text-muted-foreground">Technical review pending</p>
+                  <div className="rounded-[14px] border border-dashed border-border/70 bg-muted/10 px-6 py-8 text-center">
+                    <p className="text-[13px] font-medium text-muted-foreground">Technical review pending</p>
                     <p className="mx-auto mt-1 max-w-xs text-xs leading-relaxed text-muted-foreground">Available once the team is complete.</p>
                   </div>
                 )}
               </div>
             ) : (
-              <Card className="border border-border bg-card">
+              <Card className="overflow-hidden rounded-[14px] border border-border bg-card shadow-sm">
                 <CardContent className="p-6">
-                  <div className="prose prose-sm max-w-none text-sm leading-relaxed text-foreground prose-p:text-muted-foreground">
+                  <div className="prose prose-sm max-w-none text-[13.5px] leading-relaxed text-foreground prose-p:text-muted-foreground">
                     <div dangerouslySetInnerHTML={{ __html: item.ai_narrative }} />
                   </div>
                 </CardContent>
@@ -433,14 +433,14 @@ export default function StudentFeedbackPage() {
           </div>
 
           <div className="space-y-6">
-            <Card className="border border-border bg-card">
+            <Card className="overflow-hidden rounded-[14px] border border-border bg-card shadow-sm">
               <CardContent className="space-y-6 p-6">
                 {parsed.guidance.length > 0 && (
                   <div className="space-y-3">
-                    <h3 className="text-sm font-semibold tracking-tight text-foreground">Guidance</h3>
+                    <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Guidance</h3>
                     <ul className="space-y-2">
                       {parsed.guidance.map((g, idx) => (
-                        <li key={idx} className="rounded-lg border border-border bg-muted/20 px-3 py-2.5 text-sm leading-relaxed text-foreground">
+                        <li key={idx} className="rounded-xl border border-border/60 bg-card px-3.5 py-3 text-[13.5px] leading-relaxed text-foreground shadow-sm">
                           {g.title}
                         </li>
                       ))}
@@ -450,10 +450,10 @@ export default function StudentFeedbackPage() {
 
                 {parsed.concerns.length > 0 && (
                   <div className="space-y-3">
-                    <h3 className="text-sm font-semibold tracking-tight text-foreground">Risks</h3>
+                    <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Risks</h3>
                     <ul className="space-y-2">
                       {parsed.concerns.map((c, idx) => (
-                        <li key={idx} className="rounded-lg border border-border bg-muted/20 px-3 py-2.5 text-sm leading-relaxed text-foreground">
+                        <li key={idx} className="rounded-xl border border-amber-200/60 bg-amber-50/50 px-3.5 py-3 text-[13.5px] leading-relaxed text-foreground dark:border-amber-900/30 dark:bg-amber-950/20">
                           {c}
                         </li>
                       ))}
@@ -463,11 +463,11 @@ export default function StudentFeedbackPage() {
 
                 {parsed.clarificationAnswers.length > 0 && (
                   <div className="space-y-3">
-                    <h3 className="text-sm font-semibold tracking-tight text-foreground">Clarification feedback</h3>
-                    <ul className="space-y-2">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Clarification feedback</h3>
+                    <ul className="space-y-2.5">
                       {parsed.clarificationAnswers.map((a: string, idx: number) => (
-                        <li key={idx} className="rounded-lg border border-border bg-muted/20 px-3 py-2.5 text-sm leading-relaxed text-foreground">
-                          <span className="mb-1 block text-xs font-semibold uppercase tracking-widest text-muted-foreground">Answer {idx + 1}</span>
+                        <li key={idx} className="rounded-xl border border-border bg-muted/20 px-4 py-3.5 text-[13.5px] leading-relaxed text-foreground">
+                          <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Answer {idx + 1}</span>
                           {a}
                         </li>
                       ))}
@@ -477,27 +477,27 @@ export default function StudentFeedbackPage() {
 
                 {parsed.roadmap.length > 0 && (
                   <div className="space-y-3">
-                    <h3 className="text-sm font-semibold tracking-tight text-foreground">Roadmap</h3>
+                    <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Roadmap</h3>
                     <RoadmapTimeline items={parsed.roadmap} selectedIndex={selectedRoadmapIndex} onSelect={setSelectedRoadmapIndex} />
                     {roadmapItem && (
-                      <div className="rounded-lg border border-border bg-muted/20 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{roadmapItem.period}</p>
-                        <p className="mt-1 text-sm font-medium text-foreground">{roadmapItem.title}</p>
-                        {roadmapItem.description && <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{roadmapItem.description}</p>}
+                      <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{roadmapItem.period}</p>
+                        <p className="mt-1.5 text-[13.5px] font-semibold text-foreground">{roadmapItem.title}</p>
+                        {roadmapItem.description && <p className="mt-1 text-[13.5px] leading-relaxed text-muted-foreground">{roadmapItem.description}</p>}
                       </div>
                     )}
                   </div>
                 )}
 
-                <div className="flex items-center justify-between border-t border-border pt-4 text-xs text-muted-foreground">
-                  <span className="font-mono">{item.id.slice(0, 8)}</span>
-                  <span>{phaseLabel}</span>
+                <div className="flex items-center justify-between border-t border-border/60 pt-4 text-xs text-muted-foreground">
+                  <span className="font-mono text-[11px]">{item.id.slice(0, 8)}</span>
+                  <span className="text-[11px] uppercase tracking-wide">{phaseLabel}</span>
                 </div>
-                <Button size="sm" variant="ghost" className="h-7 w-full justify-center text-xs" onClick={() => setRawOpenFor(rawOpenFor === item.id ? null : item.id)}>
+                <Button size="sm" variant="ghost" className="h-7 w-full justify-center rounded-full text-xs" onClick={() => setRawOpenFor(rawOpenFor === item.id ? null : item.id)}>
                   {rawOpenFor === item.id ? "Hide details" : "View details"}
                 </Button>
                 {rawOpenFor === item.id && (
-                  <pre className="max-h-64 overflow-auto rounded-lg border border-border bg-muted/30 p-3 text-xs leading-relaxed text-foreground">
+                  <pre className="max-h-64 overflow-auto rounded-xl border border-border bg-muted/20 p-4 text-xs leading-relaxed text-foreground">
                     {JSON.stringify(item.agent_logs, null, 2)}
                   </pre>
                 )}
@@ -526,7 +526,7 @@ export default function StudentFeedbackPage() {
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8 md:py-12">
-      <div className="space-y-8 md:space-y-10">
+      <div className="space-y-8 md:space-y-9">
         <StudentJourneyBanner
           currentPhase={project?.current_phase || "NO_TEAM"}
           isLeader={isLeader}
@@ -535,10 +535,10 @@ export default function StudentFeedbackPage() {
           projectId={project?.id}
         />
 
-        <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Feedback</p>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">Mentorship & Feedback</h1>
-          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
+        <div className="space-y-2.5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Feedback</p>
+          <h1 className="text-[28px] font-bold tracking-tight text-foreground md:text-[32px]">Mentorship & Feedback</h1>
+          <p className="max-w-2xl text-[13.5px] leading-relaxed text-muted-foreground md:text-[14px]">
             Structured evaluation of your proposal, architecture and Viva — with clear next steps.
           </p>
         </div>
