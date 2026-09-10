@@ -12,8 +12,8 @@ export function RoadmapTimeline({ items, selectedIndex, onSelect }: RoadmapTimel
   if (!items || items.length === 0) return null;
 
   return (
-    <div className="w-full overflow-x-auto">
-      <div className="flex gap-3 py-2">
+    <div className="w-full overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex gap-3 py-1">
         {items.map((item, index) => {
           const isSelected = selectedIndex === index;
           return (
@@ -21,16 +21,19 @@ export function RoadmapTimeline({ items, selectedIndex, onSelect }: RoadmapTimel
               key={index}
               type="button"
               onClick={() => onSelect?.(index)}
-              className={`w-56 shrink-0 rounded-lg border p-4 text-left transition-colors duration-200 ${
-                isSelected ? "border-foreground bg-foreground text-background" : "border-border bg-card hover:bg-muted/20"
-              }`}
+              className={[
+                "w-56 shrink-0 rounded-xl border p-4 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                isSelected
+                  ? "border-foreground bg-foreground text-background shadow-sm"
+                  : "border-border bg-card hover:border-border hover:bg-muted/20 hover:shadow-sm",
+              ].join(" ")}
             >
-              <p className={`text-xs font-semibold uppercase tracking-widest ${isSelected ? "text-background/70" : "text-muted-foreground"}`}>
+              <p className={`text-[11px] font-semibold uppercase tracking-[0.08em] ${isSelected ? "text-background/60" : "text-muted-foreground"}`}>
                 {item.period}
               </p>
-              <p className={`mt-2 line-clamp-2 text-sm font-medium leading-tight ${isSelected ? "text-background" : "text-foreground"}`}>{item.title}</p>
+              <p className={`mt-2 line-clamp-2 text-[13.5px] font-semibold leading-snug ${isSelected ? "text-background" : "text-foreground"}`}>{item.title}</p>
               {item.description && (
-                <p className={`mt-1 line-clamp-2 text-xs leading-relaxed ${isSelected ? "text-background/70" : "text-muted-foreground"}`}>
+                <p className={`mt-1 line-clamp-2 text-xs leading-relaxed ${isSelected ? "text-background/60" : "text-muted-foreground"}`}>
                   {item.description}
                 </p>
               )}

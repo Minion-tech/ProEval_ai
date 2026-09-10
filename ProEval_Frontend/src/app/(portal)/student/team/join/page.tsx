@@ -80,10 +80,7 @@ export default function TeamJoinPage() {
         modules: formData.modules.trim() || "Core Components",
         tech_stack: formData.techStack.trim() || undefined,
       });
-      setMessage("You have joined the team. Redirecting to your workspace...");
-      setTimeout(() => {
-        router.push("/student/my-team");
-      }, 1500);
+      router.push("/student/my-team");
     } catch (err) {
       setError(err instanceof Error ? err.message : "We could not find a team with that Team ID. Please check with your leader.");
     } finally {

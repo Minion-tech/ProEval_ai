@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { Check } from "lucide-react";
 
 export interface StudentJourneyBannerProps {
   currentPhase?: string;
@@ -90,10 +91,14 @@ export function StudentJourneyBanner({
     nextActionHref = "/student/team";
     nextActionLabel = "Team Setup";
   } else if (!p1Done) {
-    if (latestStatus === "AWAITING_CLARIFICATION") {
+    if (latestStatus === "AWAITING_CLARIFICATION" && isLeader) {
       nextActionText = "Clarification requested on your Phase 1 proposal";
       nextActionHref = "/student/submit/phase1";
       nextActionLabel = "Answer Questions";
+    } else if (latestStatus === "AWAITING_CLARIFICATION" && !isLeader) {
+      nextActionText = "Proposal under review — check team feed for updates";
+      nextActionHref = "/student/my-team";
+      nextActionLabel = "View Team";
     } else {
       nextActionText = isLeader
         ? "Submit Phase 1 concept for review"
@@ -116,62 +121,79 @@ export function StudentJourneyBanner({
   }
 
   return (
-    <div className={`rounded-xl border border-border bg-card ${className}`}>
-      <div className="flex flex-col gap-4 px-5 py-5 md:flex-row md:items-center md:justify-between md:px-6">
-        <div className="space-y-1">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+    <div className={`overflow-hidden rounded-[14px] border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_16px_rgba(0,0,0,0.04)] ${className}`}>
+      <div className="flex flex-col gap-4 px-5 py-[18px] md:flex-row md:items-center md:justify-between md:px-6">
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             Project Journey
           </p>
-          <p className="text-sm font-medium text-foreground">
+          <p className="text-[13.5px] font-semibold leading-none tracking-tight text-foreground">
             {hasTeam ? `Current phase — ${currentPhase.replace(/_/g, " ")}` : "No team yet — start with Team Setup"}
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <p className="hidden max-w-[280px] truncate text-xs leading-relaxed text-muted-foreground sm:block">
+          <p className="hidden max-w-[300px] truncate text-[13px] leading-relaxed text-muted-foreground sm:block">
             {nextActionText}
           </p>
           <Link
             href={nextActionHref}
-            className="inline-flex h-8 shrink-0 items-center justify-center rounded-md bg-primary px-4 text-xs font-semibold text-primary-foreground transition-colors duration-200 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="inline-flex h-[34px] shrink-0 items-center justify-center rounded-full bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-sm transition-all duration-200 hover:bg-primary/90 hover:shadow active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             {nextActionLabel}
           </Link>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-px border-t border-border bg-border md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-px border-t border-border bg-border/50 md:grid-cols-5">
         {steps.map((step) => (
           <Link
             key={step.id}
             href={step.href}
             className={[
-              "flex flex-col gap-2 bg-card px-4 py-4 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+              "group relative flex flex-col gap-2.5 bg-card px-4 py-[18px] transition-colors duration-200 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset focus-visible:z-10",
               step.isCurrent ? "bg-muted/40" : "",
-              step.isDone ? "" : "",
             ].join(" ")}
           >
+            {step.isCurrent && (
+              <span className="absolute inset-x-0 top-0 h-[2px] bg-primary" aria-hidden="true" />
+            )}
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+              <span
+                className={[
+                  "text-[10px] font-semibold uppercase tracking-[0.1em]",
+                  step.isCurrent ? "text-primary" : step.isDone ? "text-muted-foreground" : "text-muted-foreground",
+                ].join(" ")}
+              >
                 {step.label}
               </span>
               {step.isDone ? (
-                <span className="h-1.5 w-1.5 rounded-full bg-foreground" aria-hidden="true" />
+                <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-foreground text-background">
+                  <Check className="h-3 w-3" strokeWidth={2.5} />
+                </span>
               ) : step.isCurrent ? (
-                <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-30" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-primary ring-4 ring-primary/15" />
+                </span>
               ) : (
                 <span className="h-1.5 w-1.5 rounded-full bg-border" aria-hidden="true" />
               )}
             </div>
             <span
               className={[
-                "text-sm font-semibold tracking-tight",
-                step.isCurrent ? "text-foreground" : step.isDone ? "text-foreground" : "text-muted-foreground",
+                "text-[13.5px] font-semibold leading-none tracking-tight",
+                step.isCurrent ? "text-foreground" : step.isDone ? "text-foreground" : "text-muted-foreground group-hover:text-foreground",
               ].join(" ")}
             >
               {step.title}
             </span>
-            <span className="text-xs leading-relaxed text-muted-foreground">
+            <span
+              className={[
+                "text-xs leading-none",
+                step.isCurrent ? "font-medium text-primary" : step.isDone ? "text-muted-foreground" : "text-muted-foreground/60",
+              ].join(" ")}
+            >
               {step.isDone ? "Completed" : step.isCurrent ? "In progress" : "Pending"}
             </span>
           </Link>
